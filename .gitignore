@@ -1,0 +1,43 @@
+# Ignore any leftover IDE project files, compiled python,
+# virtualenvs, open vim sessions, ms office temp files,
+# temporary doodle/test scripts, build artifacts,
+# test artifacts, misc temp files, misc. saved cruft, etc.
+*venv
+venv*
+.settings
+.vscode
+.env
+*.code-workspace
+__pycache__
+*.egg-info
+build/
+dist/
+README.html
+**/*.swp
+\~\$*
+unused*/
+saved*/
+tmp*/
+temp*/
+out
+err
+*.bak
+*.tmp
+*.log
+*.saved
+*.save
+*.gz
+*.out
+.mypy_cache
+.ruff_cache
+._*
+t
+t1
+t2
+t.*
+t1.*
+t2.*
+
+# Ignore annoying Mac-specific file system stuff
+.DS_Store
+.Trash

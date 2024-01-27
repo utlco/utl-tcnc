@@ -1,0 +1,20 @@
+#!/bin/bash
+#
+# To install typos see: https://github.com/crate-ci/typos
+#
+
+TARGET=src
+if [[ $1 ]]; then
+    TARGET="$1"
+fi
+echo $TARGET
+
+black --preview $TARGET
+ruff $TARGET
+pylint $TARGET
+mypy $TARGET
+
+# Run typos-cli if it's installed
+if command -v typos &> /dev/null; then
+    typos $TARGET
+fi

@@ -1,0 +1,5 @@
+tomli
+lxml
+-e ../utl-geom2d
+-e ../utl-inkext
+-e .[dev]

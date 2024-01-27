@@ -1,0 +1,191 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "utl-tcnc"
+version = "0.2.0"
+authors = [{name = "Claude Zervas", email = "claude@utlco.com"}]
+description = "Simple 3.5 axis gcode generator (CAM)"
+readme = "README.rst"
+requires-python = ">=3.9"
+license = {text = "GNU Lesser GPL 3"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dependencies = ["utl-inkext", "utl-geom2d"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+dev = ["pytest", "black", "ruff", "pylint", "mypy"]
+
+[project.urls]
+repository = "https://github.com/utlco/utlco-tcnc"
+documentation = "https://tcnc.readthedocs.io"
+
+[project.scripts]
+tcnc="tcnc.tcnc:main"
+
+[tool.pytest.ini_options]
+minversion="6.0"
+addopts = "-ra -q -s"
+testpaths = ["test",]
+
+[tool.black]
+line-length = 80
+target-version = ["py39"]
+skip-string-normalization = true
+preview = true
+
+[tool.pylint.MAIN]
+#extension-pkg-allow-list = ["lxml.etree"]
+
+[tool.pylint."MESSAGES CONTROL"]
+ignore = "contrib"
+disable = [
+    "too-many-locals",
+    "too-many-lines",
+    "missing-function-docstring",
+    "consider-using-enumerate",
+    "too-few-public-methods",
+    "too-many-public-methods",
+    "too-many-arguments",
+    "too-many-instance-attributes",
+    "too-many-branches",
+    "too-many-boolean-expressions",
+    "fixme"
+]
+
+[tool.pylint.VARIABLES]
+variable-rgx = "^_?[a-z][a-z0-9_]*$"
+attr-rgx = "^_{0,2}[a-z][a-z0-9_]*$"
+argument-rgx = "^_?[a-z][a-z0-9_]*$"
+method-rgx = "(?x)^(?:(?P<exempt>_[a-z0-9_]+__|(test|assert)_*[A-Z0-9][a-zA-Z0-9_]*|next)|(?P<snake_case>_{0,2}[a-z][a-z0-9_]*))$"
+
+
+[tool.ruff]
+target-version = "py39"
+preview = true
+select = [
+    "A",
+    "B",
+    "D",
+    "E",
+    "F",
+    "G",
+    "I",
+    "Q",
+    "W",
+    "N",
+    # "S",
+    "ANN",
+    "AIR",
+    "ARG",
+    "BLE",
+    # "FBT",
+    "C4",
+    # "C90",
+    "COM",
+    "DTZ",
+    # "EM",
+    # "ERA",
+    "FA",
+    # "FIX",
+    "FLY",
+    "FURB",
+    "ICN",
+    "INP",
+    "INT",
+    "ISC",
+    # "ERA",
+    "PD",
+    "PERF",
+    "PGH",
+    "PIE",
+    "PL",
+    "PT",
+    "PTH",
+    "PYI",
+    "NPY",
+    "RET",
+    "RSE",
+    "RUF",
+    "SIM",
+    "SLF",
+    "SLOT",
+    "T20",
+    # "TD",
+    "TCH",
+    "TID",
+    "TRY",
+    "UP",
+    "YTT",
+]
+ignore = [
+    "ANN101", # self annotated... good grief
+    "D104", # Missing docstring in `__init__.py`
+    "Q000", # Double quotes preferred
+    #"UP006",
+    #"UP007", # use X | Y type annot
+    #"A003", # Fix this (reversed builtin)
+    "COM812", # missing trailing comma, this is stupid
+    "RUF005", # replace concat
+    #"RSE102",
+    "SIM108", # use ternary op
+    "PLR0913", # Too many arguments in function definition
+    "PLR0917", # Too many positional args
+    "PTH123", # Use Path.open
+    "TRY003", # long msg outside exc cls
+    "TRY400", # Use `logging.exception` instead of `logging.error`
+]
+extend-exclude = [
+    "venv",
+    "contrib",
+    "tmp",
+    "saved",
+    "unused",
+    "docs",
+]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.ruff.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+mypy_path = "./src"
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+#ignore_missing_imports = true
+check_untyped_defs = true
+exclude = [
+    "contrib",
+    "tmp",
+    "saved",
+    "unused",
+    "build",
+    "docs",
+]
+
+#[[tool.mypy.overrides]]
+#module = ""
+#follow_imports = "skip"
+
+[tool.typos]
+
+[tool.typos.files]
+extend-exclude = [
+    "venv",
+    "__pycache__",
+    "saved",
+    "build",
+    "_build",
+    "unused",
+    "test",
+    "tmp",
+    "out"
+]
+
+
