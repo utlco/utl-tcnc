@@ -341,7 +341,7 @@ class GCodeGenerator:
 
     def fmt_float(self, x: float) -> str:
         """Format a float value to match current output precision."""
-        return f'{x:.{self.precision + 1}g}'
+        return f'{x:.{self.precision + 1}f}'
 
     def set_units(self, units: str, unit_scale: float = 1.0) -> None:
         """Set G code units and unit scale factor.
@@ -484,7 +484,7 @@ class GCodeGenerator:
         """
         self.header_comments.append(comment)
 
-    def comment(self, comment: Iterable[str] | str | None = None) -> None:
+    def comment(self, comment: str | Iterable[str] | None = None) -> None:
         """Write a G code comment line.
 
         Outputs a newline if the comment string is None (default).
