@@ -42,8 +42,7 @@
 
       <spacer/><separator/><spacer/>
 
-      <param name="path-close-polygons" type="boolean" gui-text="Close polygons with overlap">false</param>
-      <param indent="4" name="path-close-overlap" type="float" precision="4" min="0" max="9999" gui-text="Overlap distance">0</param>
+      <param name="path-close-overlap" type="float" precision="4" min="0" max="9999" gui-text="Closed polygon overlap">0</param>
 
       <!--
       <spacer/><separator/><spacer/>
@@ -78,7 +77,7 @@
 
     <page name="tool" gui-text="Tool">
       <param name="z-depth" type="float" precision="4" min="-99999" max="0" gui-text="Final tool depth">-0.25</param>
-      <param name="z-step" type="float" precision="4" min="-99999" max="99999" gui-text="Depth per pass">-0.25</param>
+      <param name="z-step" type="float" precision="4" min="-99999" max="99999" gui-text="Max Z travel per pass">0.25</param>
 
       <spacer/><separator/><spacer/>
 
@@ -99,8 +98,8 @@
         <option value="start">Spindle on at start</option>
         <option value="path">Spindle on before every path</option>
       </param>
-      <param indent="4" name="spindle-speed" type="int" min="0" max="50000" gui-text="Spindle RPM">0</param>
-      <param indent="4" name="spindle-wait-on" type="float" precision="4"  min="0" gui-text="Spindle warmup (seconds)">0</param>
+      <param indent="4" name="spindle-speed" type="int" min="0" max="100000" gui-text="Spindle RPM">0</param>
+      <param indent="4" name="spindle-wait-on" type="float" precision="3"  min="0" gui-text="Spindle warmup (seconds)">0</param>
       <param indent="4" name="spindle-clockwise" type="boolean" gui-text="Clockwise spindle rotation">true</param>
     </page>
 
@@ -175,10 +174,10 @@
       <label appearance="header">Toolpath Preview Rendering Options</label>
       <param name="preview-toolmarks" type="boolean" gui-text="Show tangent tool preview">false</param>
       <param name="preview-toolmarks-outline" type="boolean" gui-text="Show tangent tool outline">false</param>
-      <param name="preview-scale" type="optiongroup" appearance="minimal" gui-text="Line scale of preview marks">
-        <option value="small">Small</option>
-        <option value="medium">Medium</option>
-        <option value="large">Large</option>
+      <param name="preview-scale" type="optiongroup" appearance="minimal" gui-text="Line weight of preview marks">
+        <option value="small">Light</option>
+        <option value="medium">Normal</option>
+        <option value="large">Bold</option>
       </param>
 
       <spacer/><separator/><spacer/>
@@ -227,18 +226,13 @@
 
       <spacer/><separator/><spacer/>
 
-      <param name="brush-overshoot-mode" type="optiongroup" appearance="minimal" gui-text="Brush overshoot">
-        <option value="">No overshoot</option>
-        <option value="auto">Overshoot based on tool width</option>
-        <option value="manual">Explicit overshoot distance:</option>
-      </param>
-      <param indent="4" name="brush-overshoot-distance" type="float" precision="4" min="0" gui-text="Explicit overshoot distance">0</param>
+      <param name="brush-landing" type="float" precision="4" min="0" gui-text="Landing distance">0</param>
+      <param name="brush-soft-landing" type="boolean" gui-text="Perform soft brush landing">false</param>
 
       <spacer/><separator/><spacer/>
 
-      <param name="brush-soft-landing" type="boolean" gui-text="Perform soft brush landing and liftoff">false</param>
-      <param name="brush-add-landing" type="boolean" gui-text="Prepend landing strip">false</param>
-      <param indent="4" name="brush-landing-strip" type="float" precision="4" min="0" gui-text="Landing strip distance">0</param>
+      <param name="brush-takeoff" type="float" precision="4" min="0" gui-text="Takeoff distance">0</param>
+      <param name="brush-soft-takeoff" type="boolean" gui-text="Perform soft brush takeoff">false</param>
 
 <!--
       <param name="brush-flip-path" type="boolean" gui-text="Flip brush after every path">false</param>

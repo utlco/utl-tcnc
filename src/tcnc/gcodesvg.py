@@ -14,11 +14,20 @@ from . import gcode
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    import inkext
     from inkext import inksvg
 
 logger = logging.getLogger(__name__)
 
 _DEBUG = False
+
+PATH_LAYER_NAME = 'tcnc preview: tool path'
+TOOL_LAYER_NAME = 'tcnc preview: tangent tool'
+OUTLINE_LAYER_NAME = 'tcnc preview: tangent tool outline'
+SUBPATH_LAYER_NAME = 'tcnc subpaths'
+
+_DEFAULT_TOOLMARK_INTERVAL_LINE = '10px'
+_DEFAULT_TOOLMARK_INTERVAL_ANGLE = math.pi / 10
 
 
 class SVGPreviewPlotter(gcode.PreviewPlotter):
@@ -30,6 +39,39 @@ class SVGPreviewPlotter(gcode.PreviewPlotter):
     show the current rotation of a tangential tool that rotates
     about the Z axis.
     """
+
+    svg: inksvg.InkscapeSVGContext
+    # Tangential tool offset.
+    tool_offset: float = 0
+    # Tangential tool width.
+    tool_width: float = 0
+    toolmark_line_interval: float = 0
+    # Tool mark interval for in place rotation. In radians.
+    toolmark_rotation_interval: float = _DEFAULT_TOOLMARK_INTERVAL_ANGLE
+    show_toolmarks: bool = False
+    show_tm_outline: bool = False
+    incr_layer_suffix: bool = True
+    # Experimental subpath options.
+    # These aren't usually exposed publicly...
+    x_subpath_render: bool = False
+    x_subpath_layer_name: str = SUBPATH_LAYER_NAME
+    x_subpath_offset: int = 0
+    x_subpath_smoothness: float = 0.5
+    x_subpath_maxdist: float = 0.005
+    x_subpath_layer: inkext.TElement | None = None
+
+    # Create layers that will contain the G code preview
+    path_layer: inkext.TElement | None = None
+    tool_layer: inkext.TElement | None = None
+    outline_layer: inkext.TElement | None = None
+
+    # Non-offset tangent lines - used to make offset lines
+    toolmarks: list[geom2d.Line]
+
+    # Current XYZA location
+    _current_xy = geom2d.P(0.0, 0.0)
+    _current_z = 0.0
+    _current_a = 0.0
 
     _styles: ClassVar[dict] = {
         'toolpath_end_marker': (
@@ -62,10 +104,10 @@ class SVGPreviewPlotter(gcode.PreviewPlotter):
             'stroke-opacity:0.75'
         ),
         'toolmark_outline': (
-            'fill:$tm_outline_fill;stroke:$tm_outline_stroke;'
-            'stroke-width:$tm_outline_stroke_width;'
+            'fill:$tm_outline_fill;stroke:none'  # $tm_outline_stroke;'
+            # 'stroke-width:$tm_outline_stroke_width;'
             'stroke-opacity:0.75;'
-            'fill-opacity:0.3;'
+            'fill-opacity:0.75;'
         ),
         'tooloffset': (
             'fill:none;stroke:$tooloffset_stroke;'
@@ -81,35 +123,35 @@ class SVGPreviewPlotter(gcode.PreviewPlotter):
     _style_defaults: ClassVar[dict] = {
         'feedline_stroke': '#ff3030',
         'moveline_stroke': '#10cc10',
-        'toolmark_stroke': '#ff6060',
-        'tooloffset_stroke': '#ff6060',
-        'tm_outline_stroke': 'none',  # '#c01010',
-        'tm_outline_stroke_width': '1px',
-        'tm_outline_fill': '#00ffdf',
+        'toolmark_stroke': '#a6c3da',
+        'tooloffset_stroke': '#429b9f',
+        # 'tm_outline_stroke': 'none',  # '#c01010',
+        # 'tm_outline_stroke_width': '1px',
+        'tm_outline_fill': '#b5ebff',
         # 'tm_outline_fill_opacity': '0.1',
         'subpath_stroke': '#000000',
         'subpath_stroke_width': '1px',
     }
     _style_scale_defaults: ClassVar[dict] = {
         'small': {
-            'feedline_stroke_width': '1px',
+            'feedline_stroke_width': '3px',
             'moveline_stroke_width': '1px',
             'toolmark_stroke_width': '1px',
             'tooloffset_stroke_width': '1px',
             'end_marker_scale': '0.38',
         },
         'medium': {
-            'feedline_stroke_width': '1pt',
-            'moveline_stroke_width': '1pt',
-            'toolmark_stroke_width': '1pt',
+            'feedline_stroke_width': '5px',
+            'moveline_stroke_width': '3px',
+            'toolmark_stroke_width': '3px',
             'tooloffset_stroke_width': '1pt',
             'end_marker_scale': '0.38',
         },
         'large': {
-            'feedline_stroke_width': '2pt',
-            'moveline_stroke_width': '2pt',
-            'toolmark_stroke_width': '2pt',
-            'tooloffset_stroke_width': '1.5pt',
+            'feedline_stroke_width': '7px',
+            'moveline_stroke_width': '5px',
+            'toolmark_stroke_width': '5px',
+            'tooloffset_stroke_width': '3px',
             'end_marker_scale': '0.38',
         },
     }
@@ -133,13 +175,6 @@ class SVGPreviewPlotter(gcode.PreviewPlotter):
             'scale(%s) translate(-4.5,0)',
         ),
     )
-
-    PATH_LAYER_NAME = 'tcnc preview: tool path'
-    TOOL_LAYER_NAME = 'tcnc preview: tangent tool'
-    SUBPATH_LAYER_NAME = 'subpaths (tcnc)'
-
-    _DEFAULT_TOOLMARK_INTERVAL_LINE = '10px'
-    _DEFAULT_TOOLMARK_INTERVAL_ANGLE = math.pi / 10
 
     def __init__(
         self,
@@ -174,38 +209,19 @@ class SVGPreviewPlotter(gcode.PreviewPlotter):
         self.tool_width = tool_width
         # Tool mark interval along lines and arcs. In user units.
         if toolmark_line_interval is None:
-            interval = self.svg.unit2uu(self._DEFAULT_TOOLMARK_INTERVAL_LINE)
+            interval = self.svg.unit2uu(_DEFAULT_TOOLMARK_INTERVAL_LINE)
             self.toolmark_line_interval = interval
         else:
             self.toolmark_line_interval = toolmark_line_interval
         # Tool mark interval for in place rotation. In radians.
         if toolmark_rotation_interval is None:
-            self.toolmark_rotation_interval = (
-                self._DEFAULT_TOOLMARK_INTERVAL_ANGLE
-            )
+            self.toolmark_rotation_interval = _DEFAULT_TOOLMARK_INTERVAL_ANGLE
         else:
             self.toolmark_rotation_interval = toolmark_rotation_interval
 
         nonzero_toolwidth = not geom2d.is_zero(self.tool_width)
         self.show_toolmarks = nonzero_toolwidth and show_toolmarks
         self.show_tm_outline = nonzero_toolwidth and show_tm_outline
-
-        # TODO: make this an option... (?)
-        self.incr_layer_suffix = True
-
-        # Experimental subpath options.
-        # These aren't usually exposed publicly...
-        self.x_subpath_render = False
-        self.x_subpath_layer_name = self.SUBPATH_LAYER_NAME
-        self.x_subpath_offset = 0
-        self.x_subpath_smoothness = 0.5
-        self.x_subpath_maxdist = 0.005
-        self.x_subpath_layer = None
-
-        # Current XYZA location
-        self._current_xy = geom2d.P(0.0, 0.0)
-        self._current_z = 0.0
-        self._current_a = 0.0
 
         # Initialize CSS styles used for rendering
         style_scale_values = self._style_scale_defaults[style_scale]
@@ -215,14 +231,20 @@ class SVGPreviewPlotter(gcode.PreviewPlotter):
         )
 
         # Create layers that will contain the G code preview
+        if self.show_tm_outline:
+            # This layer goes underneath the others
+            self.outline_layer = self.svg.create_layer(
+                OUTLINE_LAYER_NAME,
+                incr_suffix=self.incr_layer_suffix,
+                flipy=True,
+            )
         self.path_layer = self.svg.create_layer(
-            self.PATH_LAYER_NAME, incr_suffix=self.incr_layer_suffix, flipy=True
+            PATH_LAYER_NAME, incr_suffix=self.incr_layer_suffix, flipy=True
         )
         svg_context.set_default_parent(self.path_layer)
-        self.tool_layer = None
-        if self.show_toolmarks or self.show_tm_outline:
+        if self.show_toolmarks:
             self.tool_layer = self.svg.create_layer(
-                self.TOOL_LAYER_NAME,
+                TOOL_LAYER_NAME,
                 incr_suffix=self.incr_layer_suffix,
                 flipy=True,
             )
@@ -238,7 +260,7 @@ class SVGPreviewPlotter(gcode.PreviewPlotter):
                 replace=True,
             )
         # Non-offset tangent lines - used to make offset lines
-        self.toolmarks: list[geom2d.Line] = []
+        self.toolmarks = []
 
     def plot_move(self, endp: gcode.TCoord) -> None:
         """Plot G00 - rapid move from current position to :endp:(x,y,z,a)."""
@@ -297,8 +319,8 @@ class SVGPreviewPlotter(gcode.PreviewPlotter):
     def plot_tool_up(self) -> None:
         """Plot the end of a tool path."""
         # This should signal the end of a tool path.
-        #        logger.debug('tool up')
-        #        geom2d.debug.draw_point(self._current_xy, color='#ff0000')
+        # logger.debug('tool up')
+        # geom2d.debug.draw_point(self._current_xy, color='#ff0000')
         # Just finish up by drawing the approximate tool path outline.
         if self.show_tm_outline and self.tool_layer is not None:
             self._draw_toolmark_outline()
@@ -400,7 +422,7 @@ class SVGPreviewPlotter(gcode.PreviewPlotter):
         outline.extend(side_2)
         style = self._styles['toolmark_outline']
         self.svg.create_polypath(
-            outline, close_path=True, style=style, parent=self.tool_layer
+            outline, close_path=True, style=style, parent=self.outline_layer
         )
 
     def _draw_subpaths(self) -> None:

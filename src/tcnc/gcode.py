@@ -168,9 +168,9 @@ class GCodeGenerator:
     # Delay time in millis for tool-up
     tool_wait_up: float = 0.0
     # Alternate G code for Tool Up
-    alt_tool_up: str | None = None
+    alt_gcode_tool_up: str | None = None
     # Alternate G code for Tool Down
-    alt_tool_down: str | None = None
+    alt_gcode_tool_down: str | None = None
     # Default delay time in milliseconds after spindle is turned on.
     spindle_wait_on: float = 0.0
     # Default delay time in milliseconds after spindle is shut off.
@@ -650,8 +650,9 @@ class GCodeGenerator:
             zsafe = self.zsafe
         # Note: self._is_tool_up is purposely not checked here to insure
         # that the tool is forced to a safe height regardless of internal state
-        if self.alt_tool_up:
-            self.gcode_command(self.alt_tool_up)
+        if self.alt_gcode_tool_up:
+            # Use machine-specific alternate tool up command
+            self.gcode_command(self.alt_gcode_tool_up)
         elif zsafe is not None:
             cmd = 'G00' if rapid else 'G01'
             self.gcode_command(cmd, Z=zsafe, force_value='Z', comment=comment)
@@ -660,15 +661,22 @@ class GCodeGenerator:
             raise GCodeError(
                 'Z safe height not specified, cannot bring tool up'
             )
+
         if self.spindle_auto:
             self.spindle_off()
+
         if wait is None:
             wait = self.tool_wait_up
+
         if wait > 0:
+            # Pause to presumably let spindle slow down
+            # or hydraulics to finish actuating.
             self.dwell(wait)
-        self._is_tool_up = True
-        if self.preview_plotter:
+
+        if self.preview_plotter and not self._is_tool_up:
             self.preview_plotter.plot_tool_up()
+
+        self._is_tool_up = True
 
     def tool_down(
         self,
@@ -695,17 +703,19 @@ class GCodeGenerator:
                 a few milliseconds to extend/retract.
             comment: Optional comment string.
         """
-        if feed is None:
-            feed = self.zfeed
-        if wait is None:
-            wait = self.tool_wait_down
         if self.spindle_auto:
             self.spindle_on()
-        if self.alt_tool_down is not None:
-            self.gcode_command(self.alt_tool_down)
-        else:
-            self.gcode_command('G01', Z=z, F=feed, comment=comment)
+
         self._is_tool_up = False
+        if self.alt_gcode_tool_down is not None:
+            self.gcode_command(self.alt_gcode_tool_down)
+        else:
+            if feed is None:
+                feed = self.zfeed
+            self.gcode_command('G01', Z=z, F=feed, comment=comment)
+
+        if wait is None:
+            wait = self.tool_wait_down
         if wait > 0:
             self.dwell(wait)
 
@@ -823,9 +833,10 @@ class GCodeGenerator:
         if (
             z_position is None
             or (self.zsafe is not None and z_position < self.zsafe)
-            or self._is_tool_up
+            or not self._is_tool_up
         ):
             self.tool_up()
+
         if z is not None and self.zsafe is not None:
             z = max(self.zsafe, z)
 

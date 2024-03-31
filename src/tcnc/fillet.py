@@ -126,6 +126,8 @@ def _create_adjusted_fillet(
         farc.inline_ignore_g1 = True
 
     new_segs = geom2d.fillet.connect_fillet(seg1, farc, seg2)
+    if not new_segs:
+        return ()
     fseg1 = toolpath.toolpath_segment(new_segs[0])
     fseg2 = toolpath.toolpath_segment(new_segs[2])
 

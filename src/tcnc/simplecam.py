@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 import math
 import os
@@ -16,8 +17,10 @@ DEBUG = bool(os.environ.get('DEBUG'))
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
+    from typing_extensions import Self
+
 if DEBUG or TYPE_CHECKING:
-    import geom2d.plotpath
+    import geom2d.plotpath  # pylint: disable=ungrouped-imports
 
 
 logger = logging.getLogger(__name__)
@@ -25,6 +28,78 @@ logger = logging.getLogger(__name__)
 
 class CAMError(Exception):
     """CAM Error."""
+
+
+@dataclasses.dataclass
+class CAMOptions:
+    """CAM options set by user."""
+
+    # Home the XYA axes when all done
+    home_when_done: bool = False
+    # Sort strategy
+    path_sort_method: str | None = None
+    # Maximum feed depth per pass
+    z_step: float = 0
+    # Final feed depth
+    z_depth: float = 0
+    # Tangential tool width in machine units
+    tool_width: float = 0
+    # Tool trail offset in machine units
+    tool_trail_offset: float = 0
+    # Biarc approximation tolerance
+    biarc_tolerance: float = 0.001
+    # Maximum bezier curve subdivision recursion for biarcs
+    biarc_max_depth: int = 4
+    # Flatness of curve to convert to line
+    line_flatness: float = 0.001
+    # Ignore path segment start tangent angle when rotating about A
+    # ignore_segment_angle = False
+    # Allow tool reversal at sharp corners
+    # allow_tool_reversal: bool = False
+    # Enable tangent rotation. Default is True.
+    enable_tangent: bool = True
+    # Fillet paths to compensate for tool width
+    path_tool_fillet: bool = False
+    # Offset paths to compensate for tool trail offset
+    path_tool_offset: bool = False
+    # Preserve G1 continuity for offset arcs
+    path_preserve_g1: bool = False
+    # Split cam at points that are not G1 or C1 continuous
+    path_split_cusps: bool = False
+    # Closed polygon overlap distance
+    path_close_overlap: float = 0
+    # Fillet paths to smooth tool travel
+    path_smooth_fillet: bool = False
+    # Smoothing fillet radius
+    path_smooth_radius: float = 0
+    # Number of paths to skip over before processing
+    skip_path_count: int = 0
+    # Start outputting G code when path count reaches this
+    # Useful if the job has to be stopped and restarted later.
+    path_count_start: int = 1
+
+    def __post_init__(self) -> None:
+        """Perform any post-init processing."""
+        if self.z_depth > 0:
+            self.z_step = 0
+        else:
+            self.z_step = min(abs(self.z_depth), abs(self.z_step))
+
+    @classmethod
+    def from_options(cls, options: object) -> Self:  # noqa: ANN102
+        """Transfer options from, say argparse.Namespace, to CAMOptions."""
+        # This might break since __dataclass_fields__ is undocumented
+        fields = set(
+            cls.__dataclass_fields__.keys()  # pylint: disable=no-member
+        )
+        logging.debug('fields: %s', fields)
+        cam_options = {
+            name: getattr(options, name)
+            for name in fields
+            if name in options.__dict__
+        }
+        logging.debug('cam options: %s', cam_options)
+        return cls(**cam_options)
 
 
 class SimpleCAM:
@@ -54,71 +129,29 @@ class SimpleCAM:
 
     """
 
-    # Home the XYA axes when all done
-    home_when_done = False
-    # Sort strategy
-    path_sort_method = None
-    # Maximum feed depth per pass
-    z_step = 0.0
-    # Final feed depth
-    z_depth = 0.0
-    # Tangential tool width in machine units
-    tool_width = 0.0
-    # Tool trail offset in machine units
-    tool_trail_offset = 0.0
-    # Biarc approximation tolerance
-    biarc_tolerance = 0.01
-    # Maximum bezier curve subdivision recursion for biarcs
-    biarc_max_depth = 4
-    # Flatness of curve to convert to line
-    line_flatness = 0.001
-    # Ignore path segment start tangent angle when rotating about A
-    # ignore_segment_angle = False
-    # Allow tool reversal at sharp corners
-    allow_tool_reversal = False
-    # Enable tangent rotation. Default is True.
-    enable_tangent = True
-    # Fillet paths to compensate for tool width
-    path_tool_fillet = False
-    # Offset paths to compensate for tool trail offset
-    path_tool_offset = False
-    # Preserve G1 continuity for offset arcs
-    path_preserve_g1 = False
-    # Split cam at points that are not G1 or C1 continuous
-    path_split_cusps = False
-    # Close polygons with overlap
-    path_close_polygon = False
-    path_close_overlap = 0
-    # Fillet paths to smooth tool travel
-    path_smooth_fillet = False
-    # Smoothing fillet radius
-    path_smooth_radius = 0.0
-    # Number of paths to skip over before processing
-    skip_path_count = 0
-    # Start outputting G code when path count reaches this
-    # Useful if the job has to be stopped and restarted later.
-    path_count_start = 1
-
-    # Cumulative tool feed distance
-    feed_distance = 0.0
     # Current angle of A axis
-    # TODO: get rid of this and use GCode.A property
-    current_angle = 0.0
-    # Tiny movement accumulator
-    _tinyseg_accumulation = 0.0
-    # Keep track of tool flip state
-    _tool_flip_toggle = -1
+    # TODO: Probably should use GCode.A property
+    current_angle: float = 0.0
 
+    # Tiny movement accumulator
+    _tinyseg_accumulation: float = 0.0
+    # Keep track of tool flip state
+    _tool_flip_toggle: int = -1
+
+    options: CAMOptions
     gc: gcode.GCodeGenerator
 
-    def __init__(self, gc: gcode.GCodeGenerator) -> None:
+    def __init__(
+        self, gc: gcode.GCodeGenerator, options: CAMOptions | None = None
+    ) -> None:
         """Constructor.
 
         Args:
-            gc: a GCodeGenerator instance
+            gc: A GCodeGenerator instance
+            options: CAM options
         """
         self.gc = gc
-        # Properties will be set by user.
+        self.options = options if options else CAMOptions()
 
     def generate_gcode(
         self,
@@ -134,22 +167,21 @@ class SimpleCAM:
             Other shape types will be silently ignored...
         """
         # TODO: range check various properties
-        # if geom2d.is_zero(self.z_step):
+        # if geom2d.is_zero(self.options.z_step):
         #    # If the step value is zero then just use the final depth.
-        #    self.z_step = abs(self.z_depth)
+        #    self.options.z_step = abs(self.options.z_depth)
 
-        logger.debug('Generating tool paths...')
-        toolpath_list = self.generate_toolpaths(path_list)
+        toolpaths = self.generate_toolpaths(path_list)
 
-        toolpath_list = self.postprocess_toolpaths(toolpath_list)
+        toolpaths = self.postprocess_toolpaths(toolpaths)
 
         # Sort paths to optimize rapid moves
-        if self.path_sort_method is not None:
-            toolpath_list = sort_paths(path_list, self.path_sort_method)
+        if self.options.path_sort_method is not None:
+            toolpaths = sort_paths(toolpaths, self.options.path_sort_method)
 
         # G code header - mostly boilerplate plus some info.
         logger.debug('Generate header...')
-        self.generate_header(toolpath_list)
+        self.generate_header(toolpaths)
 
         # Make sure the tool at the safe height
         self.gc.tool_up()
@@ -159,25 +191,25 @@ class SimpleCAM:
         # depth is reached.
         # If the final tool depth is > 0 then just ignore the step
         # value since the tool won't reach the work surface anyway.
-        if self.z_depth > 0:
-            self.z_step = 0
-            tool_depth = self.z_depth
+        if self.options.z_depth < 0 < self.options.z_step:
+            tool_depth = -self.options.z_step
         else:
-            self.z_step = min(self.z_step, abs(self.z_depth))
-            tool_depth = -self.z_step
-        depth_pass = 1
-        logger.debug('Generating g code...')
-        while tool_depth >= self.z_depth:
-            for path_count, path in enumerate(toolpath_list, 1):
+            tool_depth = self.options.z_depth
+
+        zpass_count = 1
+
+        while tool_depth >= self.options.z_depth:
+            logger.debug('pass: %d, tool_depth: %f', zpass_count, tool_depth)
+            for path_count, path in enumerate(toolpaths, 1):
+                # Skip empty paths...
                 if not path:
-                    # Skip empty paths...
-                    logger.debug('Empty path...')
                     continue
-                if path_count >= self.path_count_start:
+
+                if path_count >= self.options.path_count_start:
                     self.gc.comment()
                     actual_depth = tool_depth * self.gc.unit_scale
                     self.gc.comment(
-                        f'Path: {path_count}, pass: {depth_pass}, '
+                        f'Path: {path_count}, pass: {zpass_count}, '
                         f'depth: {actual_depth:.05f}{self.gc.gc_unit}'
                     )
                     # Rapidly move to the beginning of the tool path
@@ -186,34 +218,28 @@ class SimpleCAM:
                     self.plunge(tool_depth, path)
                     # Create G-code for each segment of the path
                     self.gc.comment('Start tool path')
-                    logger.debug('Starting tool path...')
                     for segment in path:
                         self._generate_segment_gcode(segment, tool_depth)
                     # Bring the tool back up to the safe height
-                    # self.retract(tool_depth, path)
+                    self.retract(tool_depth, path)
                     # Do a fast unwind if angle is > 360deg.
                     # Useful if the A axis gets wound up after spirals.
                     # if abs(self.current_angle) > (math.pi * 2):
                     #    self.gc.rehome_rotational_axis()
                     #    self.current_angle = 0.0
             if (
-                self.z_depth > 0
-                or self.z_step < self.gc.tolerance
-                or abs(self.z_depth - tool_depth) < self.gc.tolerance
+                self.options.z_depth > 0
+                or self.options.z_step < self.gc.tolerance
+                or abs(self.options.z_depth - tool_depth) < self.gc.tolerance
             ):
                 break
-            tool_depth = max(self.z_depth, tool_depth - self.z_step)
-            #             # remaining z distance
-            #             rdist = abs(self.z_depth - tool_depth)
-            #             if rdist > self.gc.tolerance and rdist < self.z_step:
-            #                 tool_depth = self.z_depth
-            #             else:
-            #                 tool_depth -= self.z_step
-            depth_pass += 1
-            logger.debug('pass: %d, tool_depth: %f', depth_pass, tool_depth)
+            tool_depth = max(
+                self.options.z_depth, tool_depth - self.options.z_step
+            )
+            zpass_count += 1
         self.gc.tool_up()
         # Do a rapid move back to the home position if specified
-        if self.home_when_done:
+        if self.options.home_when_done:
             self.gc.rapid_move(x=0, y=0, a=0)
         # G code footer boilerplate
         self.gc.footer()
@@ -247,10 +273,10 @@ class SimpleCAM:
         #             and not geom2d.segments_are_g1(path[-1], path[0])):
         #         geom2d.debug.draw_point(path[-1].p2, color='#00ffff')
         # #DEBUG
-        # if self.path_tool_offset and self.tool_trail_offset > 0:
+        # if self.options.path_tool_offset and self.options.tool_trail_offset > 0:
         #     for path in path_list:
-        #         new_path = cam.offset_path(path, self.tool_trail_offset,
-        #                                     preserve_g1=self.path_preserve_g1)
+        #         new_path = cam.offset_path(path, self.options.tool_trail_offset,
+        #                                     preserve_g1=self.options.path_preserve_g1)
         #         new_path_list.append(new_path)
         #         #if self.debug_svg is not None:
         #         #    logger.debug('pre offset layer')
@@ -260,59 +286,24 @@ class SimpleCAM:
         # using biarc approximation then adding corner fillets for
         # tool width turn compensation. Paths will also be split
         # at non-G1 vertices if required.
-        toolpath_list: list[toolpath.Toolpath] = []
+        toolpaths: list[toolpath.Toolpath] = []
         for path in path_list:
+            # Create a ToolPath.
+            # Converts Beziers to biarcs and adds hinting
             tool_path = toolpath.Toolpath.toolpath(
                 path,
-                biarc_tolerance=self.biarc_tolerance,
-                biarc_max_depth=self.biarc_max_depth,
-                biarc_line_flatness=self.line_flatness,
+                biarc_tolerance=self.options.biarc_tolerance,
+                biarc_max_depth=self.options.biarc_max_depth,
+                biarc_line_flatness=self.options.line_flatness,
             )
             if DEBUG:
                 geom2d.plotpath.draw_path(tool_path)
 
-            # if self.debug_svg is not None:
-            #    geom2d.debug.draw_path(path, '#33cc33', biarc_layer)
-            # First, create fillets to compensate for tool width
-            if self.path_tool_fillet and self.tool_width > 0:
-                tool_path = fillet.fillet_toolpath(
-                    tool_path,
-                    self.tool_width / 2,
-                    fillet_close=True,
-                    mark_fillet=True,
-                )
-                # if DEBUG:
-                #    geom2d.plotpath.plot_path(path, color='#33cc33')
-
-            # Split path at cusps. This may add more than one path.
-            if self.path_split_cusps:
-                paths = split_toolpath_g1(tool_path)
-                toolpath_list.extend(paths)
+            # Option: Split path at cusps (non-G1 vertices).
+            if self.options.enable_tangent and self.options.path_split_cusps:
+                toolpaths.extend(split_toolpath_g1(tool_path))
             else:
-                toolpath_list.append(tool_path)
-
-        # These passes need to be done after cusps are split since
-        # the path list may have been extended.
-        new_path_list = []
-        for path in toolpath_list:
-            new_path = path
-            if self.tool_trail_offset > 0:
-                new_path = self.offset_toolpath(new_path)
-            if self.path_smooth_radius > 0:
-                new_path = fillet.fillet_toolpath(
-                    new_path,
-                    self.path_smooth_radius,
-                    fillet_close=True,
-                    adjust_rotation=True,
-                )
-            new_path_list.append(new_path)
-
-        toolpath_list = new_path_list
-
-        if self.path_close_polygon and self.path_close_overlap > 0:
-            # Add overlap
-            for path in toolpath_list:
-                add_path_overlap(path, self.path_close_overlap)
+                toolpaths.append(tool_path)
 
         # DEBUG
         # logger.debug('a1=%f, a2=%f, a3=%f, a4=%f' % (
@@ -329,24 +320,66 @@ class SimpleCAM:
         #         if not util.segments_are_g1(prev_seg, seg):
         #             seg.svg_plot(color='#00ffff')
         # DEBUG
-        return toolpath_list
+        return toolpaths
 
-    def postprocess_toolpaths(  # noqa: PLR6301
-        self, path_list: list[toolpath.Toolpath]
+    def postprocess_toolpaths(
+        self, toolpaths: list[toolpath.Toolpath]
     ) -> list[toolpath.Toolpath]:
-        """Allow subclasses to post process the generated tool path."""
-        return path_list
+        """Allow subclasses to post process the generated tool paths."""
+        logging.debug('postprocessing...')
+        new_toolpaths = []
+        for path in toolpaths:
+            new_path = path
+            # Option: create fillets to compensate for tool width
+            if (
+                self.options.enable_tangent
+                and self.options.path_tool_fillet
+                and self.options.tool_width > 0
+            ):
+                new_path = fillet.fillet_toolpath(
+                    new_path,
+                    self.options.tool_width / 2,
+                    fillet_close=True,
+                    mark_fillet=True,
+                )
+                # if DEBUG:
+                #    geom2d.plotpath.plot_path(path, color='#33cc33')
+            # Option: Add overlap segment to closed polygons.
+            if path.is_closed() and self.options.path_close_overlap > 0:
+                # Add overlap
+                add_path_overlap(new_path, self.options.path_close_overlap)
+            # Option: Add tool trail compensation offsets
+            if (
+                self.options.enable_tangent
+                and self.options.path_tool_offset
+                and self.options.tool_trail_offset > 0
+            ):
+                new_path = self.offset_toolpath(new_path)
+                # Option: Add smoothing fillets to offset toolpath.
+                if (
+                    self.options.path_preserve_g1
+                    and self.options.path_smooth_radius > 0
+                ):
+                    new_path = fillet.fillet_toolpath(
+                        new_path,
+                        self.options.path_smooth_radius,
+                        fillet_close=True,
+                        adjust_rotation=True,
+                    )
+            new_toolpaths.append(new_path)
+
+        return new_toolpaths
 
     def offset_toolpath(self, path: toolpath.Toolpath) -> toolpath.Toolpath:
         """Offset tool path to compensate for tool trail."""
         path = offset.offset_path(
-            path, self.tool_trail_offset, self.line_flatness
+            path, self.options.tool_trail_offset, self.options.line_flatness
         )
-        if self.path_preserve_g1:
+        if self.options.path_preserve_g1:
             # Rebuild paths to fix broken G1 continuity caused by
             # path offsetting.
             path = offset.fix_g1_path(
-                path, self.biarc_tolerance, self.line_flatness
+                path, self.options.biarc_tolerance, self.options.line_flatness
             )
         return path
 
@@ -367,24 +400,24 @@ class SimpleCAM:
         # Bring the tool down to the plunge depth.
         self.gc.tool_down(depth)
 
-    #     def retract(self, depth, path):
-    #         """Lift the tool from the current working depth.
-    #
-    #         This can be subclassed to generate custom retraction profiles.
-    #         """
-    #         # If the last segment has an inline Z axis hint then the
-    #         # Z axis movement will be determined by that segment.
-    #         if not hasattr(path[-1], 'inline_z'):
-    #             self.gc.feed(z=0)
-    #         # Lift the tool up to safe height.
-    #         self.gc.tool_up()
+    def retract(
+        self,
+        depth: float,  # noqa: ARG002 # pylint: disable=unused-argument
+        path: toolpath.Toolpath,  # noqa: ARG002 # pylint: disable=unused-argument
+    ) -> None:
+        """Lift the tool from the current working depth.
+
+        This can be subclassed to generate custom retraction profiles.
+        """
+        # Lift the tool up to safe height.
+        self.gc.tool_up()
 
     def generate_rapid_move(self, path: toolpath.Toolpath) -> None:
         """Generate G code for a rapid move to the beginning of the tool path."""
         # TODO: Unwind large rotations
         first_segment = path[0]
         segment_start_angle = toolpath.seg_start_angle(first_segment)
-        if self.enable_tangent:
+        if self.options.enable_tangent:
             rotation = geom2d.calc_rotation(
                 self.current_angle, segment_start_angle
             )
@@ -397,14 +430,14 @@ class SimpleCAM:
         self, segment: toolpath.ToolpathSegment, depth: float
     ) -> None:
         """Generate G code for Line and Arc path segments."""
-        # Keep track of total tool travel during feeds
-        self.feed_distance += segment.length()
         # Amount of Z axis movement along this segment
         depth = getattr(segment, 'inline_z', depth)
+
         # Ignore the a axis tangent rotation for this segment if True
         inline_ignore_a = getattr(segment, 'inline_ignore_a', False)
+
         rotation: float = 0
-        if inline_ignore_a or not self.enable_tangent:
+        if inline_ignore_a or not self.options.enable_tangent:
             start_angle = self.current_angle
             end_angle = self.current_angle
         else:
