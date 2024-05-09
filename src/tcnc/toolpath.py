@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING, Union
 
 import geom2d
@@ -149,7 +150,12 @@ class Toolpath(list[ToolpathSegment]):
             elif isinstance(segment, geom2d.Line):
                 yield ToolpathLine(*segment)
             elif isinstance(segment, geom2d.Arc):
-                yield ToolpathArc(*segment)
+                if abs(segment.angle) < math.pi / 2:
+                    yield ToolpathArc(*segment)
+                else:
+                    arcs = _subdivide_arc(segment)
+                    for arc in arcs:
+                        yield ToolpathArc(*arc)
             elif isinstance(segment, (ToolpathLine, ToolpathArc)):
                 yield segment
             else:
@@ -174,3 +180,17 @@ class Toolpath(list[ToolpathSegment]):
     def is_closed(self) -> bool:
         """Return True if this path forms a closed polygon."""
         return len(self) >= _MIN_TOOLPATH_LEN and self[0].p1 == self[-1].p2
+
+
+def _subdivide_arc(arc: geom2d.Arc) -> list[geom2d.Arc]:
+    """Subdivide arc if it's angle is larger than PI."""
+    mu = 1 / ((abs(arc.angle) + (math.pi / 2)) / math.pi)
+    smaller_arcs: list[geom2d.Arc] = []
+    arc2: geom2d.Arc | None = arc
+    while arc2 and abs(arc2.angle) > math.pi:
+        arcs = arc2.subdivide_at(mu)
+        smaller_arcs.append(arcs[0])
+        arc2 = arcs[1] if len(arcs) > 1 else None
+    if arc2:
+        smaller_arcs.append(arc2)
+    return smaller_arcs
