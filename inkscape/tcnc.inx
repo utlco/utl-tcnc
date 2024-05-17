@@ -2,7 +2,7 @@
 
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
 
-  <name>Tcnc</name>
+  <name>TCNC</name>
   <id>com.utlco.tcnc</id>
 
   <effect needs-live-preview="false" refresh-extensions="true">
@@ -27,31 +27,39 @@
       <param name="skip-path-count" type="int" min="0" max="1000000" gui-text="Number of paths to skip">0</param>
       <spacer/><separator/><spacer/>
 -->
-      <label appearance="header">Tangent Tool Path Options</label>
+      <label appearance="header">Tool Path Options</label>
+
       <param
         name="enable-tangent"
         type="boolean"
-        gui-text="Enable tangent rotation">
-        true
+        gui-text="Enable automatic tangent tool rotation">
+        false
       </param>
-
-      <param indent="4" name="path-split-cusps" type="boolean" gui-text="Split paths at non-tangent control points">false</param>
       <param indent="4" name="path-tool-fillet" type="boolean" gui-text="Fillet paths for tangent tool width compensation">false</param>
-      <param indent="4" name="path-tool-offset" type="boolean" gui-text="Offset paths for tool trail offset compensation">false</param>
-      <param indent="8" name="path-preserve-g1" type="boolean" gui-text="Smooth offsets to preserve tangent (G1) continuity">false</param>
+      <spacer/>
+
+      <param name="path-tool-offset" type="boolean" gui-text="Offset paths for tool trail offset compensation">false</param>
+      <param indent="4" name="path-preserve-g1" type="boolean" gui-text="Smooth offsets to preserve tangent (G1) continuity">false</param>
+
+      <param name="path-split-cusps" type="boolean" gui-text="Split paths at non-tangent (non-G1) control points">false</param>
+      <spacer/>
 
       <spacer/><separator/><spacer/>
 
-      <param name="path-close-overlap" type="float" precision="4" min="0" max="9999" gui-text="Closed polygon overlap">0</param>
-
-      <!--
-      <spacer/><separator/><spacer/>
-
-      <param name="path-smooth-fillet" type="boolean" gui-text="Add final smoothing fillets">false</param>
-      <param indent="4" name="path-smooth-radius" type="float" precision="4" min="0" max="9999" gui-text="Smoothing fillet radius">0</param>
-      -->
+      <param name="path-close-polygons" type="boolean"
+        gui-text="Add final path overlap to closed polygons">false</param>
+      <param
+        indent="4"
+        name="path-close-overlap" type="float" precision="4" min="0" max="9999"
+        gui-text="Amount of overlap (in document units)">0</param>
 
       <spacer/><separator/><spacer/>
+
+      <label>
+          Path sorting can be used for aesthetic reasons
+          or to minimize rapid moves between toolpaths.
+      </label>
+      <spacer/>
 
       <param name="path-sort-method" type="optiongroup" appearance="minimal" gui-text="Path sorting method">
         <option value="">None</option>
@@ -69,15 +77,15 @@
 -->
       </param>
 
-      <spacer/>
+      <spacer/><separator/><spacer/>
 
-      <label>Path sorting attempts to minimize rapid moves between toolpaths.</label>
+      <param name="flip-y-axis" type="boolean" gui-text="Flip Y axis so toolpath origin as at bottom left">true</param>
 
     </page>
 
     <page name="tool" gui-text="Tool">
-      <param name="z-depth" type="float" precision="4" min="-99999" max="0" gui-text="Final tool depth">-0.25</param>
-      <param name="z-step" type="float" precision="4" min="-99999" max="99999" gui-text="Max Z travel per pass">0.25</param>
+      <param name="z-depth" type="float" precision="4" min="-99999" max="0" gui-text="Final tool depth">0</param>
+      <param name="z-step" type="float" precision="4" min="-99999" max="99999" gui-text="Max depth per pass">0</param>
 
       <spacer/><separator/><spacer/>
 
@@ -135,94 +143,19 @@
       <param name="blend-tolerance" type="float" precision="4" min="0" max="9999" gui-text="Blend tolerance (P value)">0</param>
     </page>
 
-   <page name="tolerances" gui-text="Tolerances">
-      <param name="tolerance" type="float" precision="9" min="0" max=".00001" gui-text="Numeric tolerance (epsilon)">0.000001</param>
-      <param name="gc-tolerance" type="float" precision="9" min="0" max="1" gui-text="GCode tolerance (precision)">0.0001</param>
-
-      <spacer/><separator/><spacer/>
-
-      <label appearance="header">Bi-Arc Approximation of Bézier Curves</label>
-      <param name="biarc-tolerance" type="float" precision="4" min="0.0001" max="10" gui-text="Curve approximation tolerance">0.001</param>
-      <param name="biarc-max-depth" type="int" min="1" max="8" gui-text="Maximum Bezier curve subdivisions">4</param>
-      <param name="line-flatness" type="float" precision="4" min="0.0001" max="10" gui-text="Minimum curve flatness for conversion to line">0.001</param>
-      <param name="min-arc-radius" type="float" precision="4" min="0.0001" max="10"  gui-text="Minimum arc radius">0.001</param>
-<!--
-      <param name="angle-tolerance" type="float" precision="5" min="0" max="1" gui-text="Angle tolerance:">0.0001</param>
--->
-    </page>
-
-<!--
-    <page name="preview" gui-text="Preview">
-    </page>
--->
-
-    <page name="output" gui-text="Output">
-      <label appearance="header">G Code Output Options</label>
-      <param name="output-path" type="string" gui-text="Full path of G code output file">~/output.ngc</param>
-      <param name="append-suffix" type="boolean" gui-text="Auto-increment filename suffix">false</param>
-      <spacer/>
-      <!--
-      <param name="separate-layers" type="boolean" gui-text="Create separate gcode file per Inkscape layer">false</param>
-      <spacer/>
-      -->
-      <param name="gcode-line-numbers" type="boolean" gui-text="Show G code line numbers">false</param>
-      <param name="gcode-comments" type="boolean" gui-text="Show G code comments">true</param>
-      <param indent="4" name="write-settings" type="boolean" gui-text="Write settings in header comments">true</param>
-
-      <spacer/><separator/><spacer/>
-
-      <label appearance="header">Toolpath Preview Rendering Options</label>
-      <param name="preview-toolmarks" type="boolean" gui-text="Show tangent tool preview">false</param>
-      <param name="preview-toolmarks-outline" type="boolean" gui-text="Show tangent tool outline">false</param>
-      <param name="preview-scale" type="optiongroup" appearance="minimal" gui-text="Line weight of preview marks">
-        <option value="small">Light</option>
-        <option value="medium">Normal</option>
-        <option value="large">Bold</option>
-      </param>
-
-      <spacer/><separator/><spacer/>
-
-      <label appearance="header">Log Output</label>
-      <label>The log output can be useful for troubleshooting.</label>
-      <spacer/>
-      <param name="log-create" type="boolean" gui-text="Create log file">false</param>
-      <param indent="4" name="log-level" type="optiongroup" appearance="minimal" gui-text="Log level">
-        <option value="DEBUG">Debug</option>
-        <option value="INFO">Info</option>
-        <option value="WARNING">Warning</option>
-        <option value="ERROR">Error</option>
-        <option value="CRITICAL">Critical</option>
-      </param>
-      <param indent="4" name="log-filename" type="string" gui-text="Full path of log file">~/tcnc.log</param>
-
-      <spacer/><separator/><spacer/>
-
-      <param name="create-debug-layer" type="boolean" gui-text="Create debug layer">false</param>
-      <label>The debug layer may contain geometry useful for debugging.</label>
-    </page>
-
-    <page name="about" gui-text="About">
-      <label appearance="header">TCNC</label>
-      <label>Version 0.3.1</label>
-      <label>© 2010-2024 Claude Zervas</label>
-      <label appearance="url">https://github.com/utlco/utl-tcnc</label>
-    </page>
-
-    <!-- Artist-specific options... Not universally applicable -->
     <page name="brush" gui-text="Brush">
-      <param name="brush-c1" type="description">Application-specific options (can be ignored)</param>
+
+      <label appearance="header">Brush-like Tool Settings</label>
+
       <spacer/><separator/><spacer/>
 
       <param name="brush-reload-enable" type="boolean" gui-text="Enable brush reload">false</param>
       <param indent="4" name="brush-reload-max-paths" type="int" min="1" max="1000" gui-text="Number of paths between reload">1</param>
-      <param name="brush-reload-rotate" type="boolean" gui-text="Rotate brush for reload">false</param>
-      <param indent="4" name="brush-reload-angle" type="float" precision="0" min="0" max="360" gui-text="Brush reload angle (degrees)">0</param>
-      <param name="brush-pause-mode" type="optiongroup" appearance="minimal" gui-text="Brush reload pause">
-        <option value="">No pause</option>
-        <option value="restart">Pause brush until restart</option>
-        <option value="time">Pause brush for time:</option>
-      </param>
-      <param indent="4" name="brush-reload-dwell" type="float" precision="1" gui-text="Brush pause time (seconds)">0</param>
+      <param indent="4" name="brush-reload-rotate" type="boolean" gui-text="Rotate brush for reload">false</param>
+      <param indent="8" name="brush-reload-angle" type="float" precision="0" min="0" max="360" gui-text="Brush reload angle (degrees)">0</param>
+      <param indent="4" name="brush-pause-resume" type="boolean" gui-text="Pause brush until manual resume">false</param>
+      <param indent="4" name="brush-reload-dwell" type="float" precision="1"
+        gui-text="Pause time (seconds) - ignored if manual resume is selected">0</param>
 
       <spacer/><separator/><spacer/>
 
@@ -256,6 +189,87 @@
       <param name="brush-fillet-radius-auto" type="boolean" gui-text="Auto-calc fillet radius">false</param>
 -->
     </page>
+
+     <page name="tolerances" gui-text="Tolerances">
+      <param name="tolerance" type="float" precision="9" min="0" max=".00001" gui-text="Numeric tolerance (epsilon)">0.000001</param>
+      <param name="gc-tolerance" type="float" precision="9" min="0" max="1" gui-text="G code tolerance (output precision)">0.0001</param>
+
+      <spacer/><separator/><spacer/>
+
+      <label appearance="header">Bi-Arc Approximation of Bézier Curves</label>
+      <param name="biarc-tolerance" type="float" precision="5" min="0.00001" max="10" gui-text="Curve approximation tolerance">0.001</param>
+      <param name="biarc-max-depth" type="int" min="1" max="10" gui-text="Maximum Bezier curve subdivisions">4</param>
+      <param name="line-flatness" type="float" precision="5" min="0" max="10" gui-text="Minimum curve flatness for conversion to line">0.00001</param>
+      <param name="min-arc-radius" type="float" precision="5" min="0.00001" max="10"  gui-text="Minimum arc radius">0.001</param>
+<!--
+      <param name="angle-tolerance" type="float" precision="5" min="0" max="1" gui-text="Angle tolerance:">0.0001</param>
+-->
+    </page>
+
+<!--
+    <page name="preview" gui-text="Preview">
+    </page>
+-->
+
+    <page name="output" gui-text="Output">
+      <label appearance="header">G Code Output Options</label>
+
+      <param name="gcode-line-numbers" type="boolean" gui-text="Show G code line numbers">false</param>
+      <param name="gcode-comments" type="boolean" gui-text="Show G code comments">true</param>
+      <param indent="4" name="write-settings" type="boolean" gui-text="Write settings in header comments">true</param>
+
+      <spacer/>
+      <param name="output-path" type="string" gui-text="Full path of G code output file">~/output.ngc</param>
+      <param name="append-suffix" type="boolean" gui-text="Auto-increment filename suffix">false</param>
+      <!--
+      <param name="separate-layers" type="boolean" gui-text="Create separate gcode file per Inkscape layer">false</param>
+      <spacer/>
+      -->
+
+      <spacer/><separator/><spacer/>
+
+      <label appearance="header">Toolpath Preview Rendering Options</label>
+      <param name="preview-toolmarks" type="boolean" gui-text="Show tangent tool preview">false</param>
+      <param name="preview-toolmarks-outline" type="boolean" gui-text="Show tangent tool outline">false</param>
+      <param name="preview-scale" type="optiongroup" appearance="minimal" gui-text="Line weight of preview marks">
+        <option value="small">Light</option>
+        <option value="medium">Normal</option>
+        <option value="large">Heavy</option>
+      </param>
+
+      <spacer/><separator/><spacer/>
+
+      <label appearance="header">Log Output</label>
+      <label>The log output can be useful for troubleshooting.</label>
+      <spacer/>
+      <param name="log-create" type="boolean" gui-text="Create log file">false</param>
+      <param indent="4" name="log-level" type="optiongroup" appearance="minimal" gui-text="Log level">
+        <option value="DEBUG">Debug</option>
+        <option value="INFO">Info</option>
+        <option value="WARNING">Warning</option>
+        <option value="ERROR">Error</option>
+        <option value="CRITICAL">Critical</option>
+      </param>
+      <param indent="4" name="log-filename" type="string" gui-text="Full path of log file">~/tcnc.log</param>
+
+      <spacer/><separator/><spacer/>
+
+      <param name="create-debug-layer" type="boolean" gui-text="Create debug layer">false</param>
+      <label>The debug layer may contain geometry useful for debugging.</label>
+    </page>
+
+    <page name="about" gui-text="About">
+      <label appearance="header">TCNC</label>
+      <label>Version 0.3.1</label>
+      <label>© 2010-2024 Claude Zervas</label>
+      <spacer/>
+      <label>Documentation:</label>
+      <label appearance="url">https://utlco.github.io/utl-tcnc</label>
+      <spacer/>
+      <label>Source code:</label>
+      <label appearance="url">https://github.com/utlco/utl-tcnc</label>
+    </page>
+
 
     <page name="extra" gui-text="Extras">
       <label>Application-specific options (can be ignored)</label>
