@@ -20,7 +20,7 @@ test = ["pytest"]
 dev = ["pytest", "black", "ruff", "pylint", "mypy"]
 
 [project.urls]
-repository = "https://github.com/utlco/utlco-tcnc"
+repository = "https://github.com/utlco/utl-tcnc"
 documentation = "https://tcnc.readthedocs.io"
 
 [project.scripts]
