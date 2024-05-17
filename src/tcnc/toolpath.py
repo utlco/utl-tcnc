@@ -110,7 +110,7 @@ class Toolpath(list[ToolpathSegment]):
         biarc_max_depth: float = 4,
         biarc_line_flatness: float = 0.001,
     ) -> Toolpath:
-        """Create a Toolpath from path.
+        """Create a Toolpath from geometry path.
 
         CubicBezier segments are approximated with biarcs.
         """
@@ -127,21 +127,21 @@ class Toolpath(list[ToolpathSegment]):
         biarc_max_depth: float = 4,
         biarc_line_flatness: float = 0.001,
     ) -> Iterator[ToolpathLine | ToolpathArc]:
-        """Create a Toolpath iterator from path.
+        """Create a Toolpath iterator from geometry path.
 
         CubicBezier segments are approximated with biarcs.
         """
         for segment in path:
+            if segment.p1 == segment.p2:
+                # Skip zero length segments
+                continue
             if isinstance(segment, geom2d.CubicBezier):
+                # Convert Bezier curves to biarcs.
                 biarcs = segment.biarc_approximation(
                     tolerance=biarc_tolerance,
                     max_depth=biarc_max_depth,
                     line_flatness=biarc_line_flatness,
                 )
-                if not biarcs:
-                    # msg = 'Degenerate Bezier segment.'
-                    # raise ValueError(msg)
-                    yield ToolpathLine(segment.p1, segment.p2)
                 for biarc_seg in biarcs:
                     if isinstance(biarc_seg, geom2d.Arc):
                         yield ToolpathArc(*biarc_seg)
@@ -153,13 +153,14 @@ class Toolpath(list[ToolpathSegment]):
                 if abs(segment.angle) < math.pi / 2:
                     yield ToolpathArc(*segment)
                 else:
-                    arcs = _subdivide_arc(segment)
-                    for arc in arcs:
+                    # Keep arcs under 90deg. to simplify toolpath processing.
+                    for arc in _subdivide_arc(segment):
                         yield ToolpathArc(*arc)
             elif isinstance(segment, (ToolpathLine, ToolpathArc)):
+                # Already converted segment. Shouldn't happen.
                 yield segment
             else:
-                msg = f'Invalid path segment type: {type(segment)}'
+                msg = f'Unexpected path segment type: {type(segment)}'
                 raise TypeError(msg)
 
     def path_reversed(self) -> None:
@@ -183,11 +184,11 @@ class Toolpath(list[ToolpathSegment]):
 
 
 def _subdivide_arc(arc: geom2d.Arc) -> list[geom2d.Arc]:
-    """Subdivide arc if it's angle is larger than PI."""
-    mu = 1 / ((abs(arc.angle) + (math.pi / 2)) / math.pi)
+    """Subdivide arc if the sweep angle is larger than PI/2."""
+    mu = 1 / ((abs(arc.angle) + (math.pi / 4)) / (math.pi / 2))
     smaller_arcs: list[geom2d.Arc] = []
     arc2: geom2d.Arc | None = arc
-    while arc2 and abs(arc2.angle) > math.pi:
+    while arc2 and abs(arc2.angle) > (math.pi / 2):
         arcs = arc2.subdivide_at(mu)
         smaller_arcs.append(arcs[0])
         arc2 = arcs[1] if len(arcs) > 1 else None
