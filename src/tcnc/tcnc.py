@@ -51,9 +51,10 @@ class Tcnc(inkext.InkscapeExtension):
     ) -> None:
         """Add CLI options."""
         parser.add_argument(
-            '--origin-ref',
-            default='doc',
-            help=_('Lower left origin reference.'),
+            '--flip-y-axis',
+            type=inkext.inkbool,
+            default=True,
+            help=_('Flip Y axis so toolpath origin is at lower left.'),
         )
         parser.add_argument(
             '--path-sort-method', default='none', help=_('Path sorting method.')
@@ -316,6 +317,12 @@ class Tcnc(inkext.InkscapeExtension):
             help=_('Rotate brush before reload.'),
         )
         parser.add_argument(
+            '--brush-pause-resume',
+            type=inkext.inkbool,
+            default=False,
+            help=_('Pause brush for reload until manual resume.'),
+        )
+        parser.add_argument(
             '--brush-pause-mode', default='', help=_('Brush reload pause mode.')
         )
         parser.add_argument(
@@ -443,6 +450,13 @@ class Tcnc(inkext.InkscapeExtension):
             help=_('Subpath layer name'),
         )
 
+    def post_process_options(self) -> None:
+        """Fix CLI option values after parsing SVG document."""
+        super().post_process_options()
+        if not self.options.path_close_polygons:
+            self.options.path_close_overlap = 0
+
+
     # pylint: enable=too-many-statements
 
     def effect(self) -> None:
@@ -459,11 +473,16 @@ class Tcnc(inkext.InkscapeExtension):
 
         timer_start = timeit.default_timer()
 
-        # Convert SVG elements to path geometry.
         # Flip the Y axis so origin is on bottom-left.
-        flip_transform = transform2d.matrix_scale_translate(
-            1.0, -1.0, 0.0, self.svg.get_document_size()[1]
+        flip_transform = (
+            transform2d.matrix_scale_translate(
+                1.0, -1.0, 0.0, self.svg.get_document_size()[1]
+            )
+            if self.options.flip_y_axis
+            else None
         )
+
+        # Convert SVG elements to path geometry.
         path_list: list[Sequence[geomsvg.TPathGeom]] = (
             geomsvg.svg_to_geometry(  # type: ignore [assignment]
                 svg_elements, flip_transform
@@ -476,7 +495,7 @@ class Tcnc(inkext.InkscapeExtension):
             auto_incr=self.options.append_suffix,
             default_suffix='.ngc',
         )
-        logger.debug('gcode output: %s', filepath)
+        # logger.debug('gcode output: %s', filepath)
         try:
             with filepath.open('w', encoding='utf-8') as output:
                 gcgen = self._init_gcode(output)
@@ -506,6 +525,7 @@ class Tcnc(inkext.InkscapeExtension):
             style_scale=self.options.preview_scale,
             show_toolmarks=self.options.preview_toolmarks,
             show_tm_outline=self.options.preview_toolmarks_outline,
+            flip_y_axis=self.options.flip_y_axis,
         )
         # Experimental options
         preview_plotter.x_subpath_render = self.options.x_subpath_render
@@ -563,14 +583,11 @@ class Tcnc(inkext.InkscapeExtension):
         unit_scale = self.svg.unit_convert(
             '1.0', from_unit=doc_units, to_unit=units
         )
-        logger.debug('units=%s, unit_scale=%s', units, unit_scale)
         gcgen.set_units(units, unit_scale)
-        # logger = logging.getLogger(__name__)
+        # logger.debug('units=%s, unit_scale=%s', units, unit_scale)
         # logger.debug('doc units: %s' % doc_units)
         # logger.debug('view_scale: %f' % self.svg.view_scale)
         # logger.debug('unit_scale: %f' % unit_scale)
-        # gcgen.set_tolerance(geom2d.const.EPSILON)
-        # gcgen.set_output_precision(geom2d.const.EPSILON_PRECISION)
         gcgen.set_tolerance(self.options.tolerance)
         precision = max(
             0, int(round(abs(math.log10(self.options.gc_tolerance))))
@@ -594,7 +611,6 @@ class Tcnc(inkext.InkscapeExtension):
         """Create and initialize the tool path generator."""
         # Transfer CLI args to CAMOptions
         cam_options = paintcam.PaintCAMOptions.from_options(self.options)
-        logging.debug(cam_options)
         return paintcam.PaintCAM(gc, cam_options)
 
 
