@@ -5,21 +5,20 @@ from __future__ import annotations
 import dataclasses
 import logging
 import math
-import os
 from typing import TYPE_CHECKING
 
 import geom2d
 
 from . import fillet, gcode, offset, toolpath
 
-DEBUG = bool(os.environ.get('DEBUG'))
+_DEBUG = False  # geom2d.const.DEBUG
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     from typing_extensions import Self
 
-if DEBUG or TYPE_CHECKING:
+if _DEBUG or TYPE_CHECKING:
     import geom2d.plotpath  # pylint: disable=ungrouped-imports
 
 
@@ -92,13 +91,12 @@ class CAMOptions:
         fields = set(
             cls.__dataclass_fields__.keys()  # pylint: disable=no-member
         )
-        logging.debug('fields: %s', fields)
         cam_options = {
             name: getattr(options, name)
             for name in fields
             if name in options.__dict__
         }
-        logging.debug('cam options: %s', cam_options)
+        # logging.debug('cam options: %s', cam_options)
         return cls(**cam_options)
 
 
@@ -172,6 +170,9 @@ class SimpleCAM:
         #    self.options.z_step = abs(self.options.z_depth)
 
         toolpaths = self.generate_toolpaths(path_list)
+        if _DEBUG:
+            for t in toolpaths:
+                geom2d.plotpath.draw_path(t, width='.5px')
 
         toolpaths = self.postprocess_toolpaths(toolpaths)
 
@@ -180,7 +181,6 @@ class SimpleCAM:
             toolpaths = sort_paths(toolpaths, self.options.path_sort_method)
 
         # G code header - mostly boilerplate plus some info.
-        logger.debug('Generate header...')
         self.generate_header(toolpaths)
 
         # Make sure the tool at the safe height
@@ -296,11 +296,11 @@ class SimpleCAM:
                 biarc_max_depth=self.options.biarc_max_depth,
                 biarc_line_flatness=self.options.line_flatness,
             )
-            if DEBUG:
-                geom2d.plotpath.draw_path(tool_path)
+            # if _DEBUG:
+            #    geom2d.plotpath.draw_path(tool_path)
 
             # Option: Split path at cusps (non-G1 vertices).
-            if self.options.enable_tangent and self.options.path_split_cusps:
+            if self.options.path_split_cusps:
                 toolpaths.extend(split_toolpath_g1(tool_path))
             else:
                 toolpaths.append(tool_path)
@@ -326,7 +326,6 @@ class SimpleCAM:
         self, toolpaths: list[toolpath.Toolpath]
     ) -> list[toolpath.Toolpath]:
         """Allow subclasses to post process the generated tool paths."""
-        logging.debug('postprocessing...')
         new_toolpaths = []
         for path in toolpaths:
             new_path = path
@@ -342,7 +341,7 @@ class SimpleCAM:
                     fillet_close=True,
                     mark_fillet=True,
                 )
-                # if DEBUG:
+                # if _DEBUG:
                 #    geom2d.plotpath.plot_path(path, color='#33cc33')
             # Option: Add overlap segment to closed polygons.
             if path.is_closed() and self.options.path_close_overlap > 0:
@@ -350,8 +349,7 @@ class SimpleCAM:
                 add_path_overlap(new_path, self.options.path_close_overlap)
             # Option: Add tool trail compensation offsets
             if (
-                self.options.enable_tangent
-                and self.options.path_tool_offset
+                self.options.path_tool_offset
                 and self.options.tool_trail_offset > 0
             ):
                 new_path = self.offset_toolpath(new_path)
@@ -508,11 +506,11 @@ def add_path_overlap(path: toolpath.Toolpath, overlap: float) -> None:
         arclen = arcseg.length()
         overlap = min(arclen, overlap)
         endp = arcseg.point_at(overlap / arclen)
-        oseg = toolpath.ToolpathArc(
-            *geom2d.Arc.from_two_points_and_center(
-                arcseg.p1, endp, arcseg.center
-            )
+        arc = geom2d.Arc.from_two_points_and_center(
+            arcseg.p1, endp, arcseg.center
         )
+        if arc:
+            oseg = toolpath.ToolpathArc(*arc)
     if oseg:
         path.append(oseg)
 

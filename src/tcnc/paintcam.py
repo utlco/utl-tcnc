@@ -26,6 +26,8 @@ class PaintCAMOptions(simplecam.CAMOptions):
 
     # Brush reload pause mode
     brush_pause_mode: str | None = None
+    # : Brush reload pause manual resume
+    brush_pause_resume: bool = False
     # : Enable brush reload sequence
     brush_reload_enable: bool = False
     # : Enable rotation to reload angle before pause.
@@ -93,13 +95,10 @@ class PaintCAM(simplecam.SimpleCAM):
                 )
             else:
                 self.gc.rapid_move(start_segment.p1.x, start_segment.p1.y)
-            if (
-                self.options.brush_pause_mode == 'time'
-                and self.options.brush_reload_dwell > 0
-            ):
-                self.gc.dwell(self.options.brush_reload_dwell)
-            elif self.options.brush_pause_mode == 'restart':
+            if self.options.brush_pause_resume:
                 self.gc.pause()
+            elif self.options.brush_reload_dwell > 0:
+                self.gc.dwell(self.options.brush_reload_dwell)
         super().generate_rapid_move(path)
 
     def _prepend_landing(self, path: toolpath.Toolpath) -> None:

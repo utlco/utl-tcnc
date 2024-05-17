@@ -37,8 +37,8 @@ def offset_path(
         min_arc_dist: The minimum distance between two connected
             segment end points that can be bridged with an arc.
             A line will be used if the distance is less than this.
-        g1_tolerance: The angle tolerance to determine if two segments
-            are g1 continuous.
+        g1_tolerance: The tangent angle tolerance to determine if
+            two segments are g1 continuous.
 
     Returns:
         A new path
@@ -49,13 +49,18 @@ def offset_path(
     """
     if geom2d.float_eq(offset, 0.0):
         return path
+
+    # New offset path
     o_path = toolpath.Toolpath()
+
     prev_seg = None
     prev_offset_seg = None
     for seg in path:
         if seg.p1 == seg.p2:
             # Skip zero length segments
             continue
+
+        # The toolpath should be just Line and Arc segments at this point.
         if isinstance(seg, geom2d.Line):
             # Line segments are easy - just shift them forward by offset
             offset_seg = toolpath.transfer_hints(seg, seg.shift(offset))
@@ -63,6 +68,7 @@ def offset_path(
             offset_seg = toolpath.transfer_hints(seg, offset_arc(seg, offset))
         else:
             raise toolpath.ToolpathError('Unrecognized path segment type.')
+
         # Fix discontinuities caused by offsetting non-G1 segments
         if prev_seg is not None:
             if prev_offset_seg.p2 != offset_seg.p1:
@@ -102,11 +108,12 @@ def offset_path(
                 and not hasattr(seg, 'inline_ignore_g1')
             ):
                 # Add hint for smoothing pass
-                logger.debug('g1')
                 prev_offset_seg.g1 = True
+
         prev_seg = seg
         prev_offset_seg = offset_seg
         o_path.append(offset_seg)
+
     # Compensate for starting angle
     start_angle = (o_path[0].p1 - path[0].p1).angle()
     o_path[0].inline_start_angle = start_angle
@@ -203,7 +210,7 @@ def smoothing_arcs(
         for the next curve.
     """
     curve, cp1 = geom2d.bezier.smoothing_curve(seg1, seg2, cp1, match_arcs)
-    #     geom2d.debug.draw_bezier(curve, color='#00ff44') #DEBUG
+    # geom2d.debug.draw_bezier(curve, color='#00ff44') #DEBUG
     biarc_segs = curve.biarc_approximation(
         tolerance=tolerance, max_depth=max_depth, line_flatness=line_flatness
     )
