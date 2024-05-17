@@ -1,20 +1,45 @@
 #!/bin/bash
 #
-# To install typos see: https://github.com/crate-ci/typos
+# Simple script for actions that should be performed before a git commit/push.
+# No need to install pre-commit, poetry, etc.
+#
+# Configuration is in pyproject.toml
+#
+# To install/update typos see: https://github.com/crate-ci/typos
+#
+#     cargo install typos-cli
 #
 
-TARGET=src
-if [[ $1 ]]; then
-    TARGET="$1"
-fi
-echo $TARGET
+# Build documentation to make sure it all works
+docutils README.rst > README.html
+#cd docsrc; make html
 
-black --preview $TARGET
-ruff $TARGET
-pylint $TARGET
-mypy $TARGET
+BLACK="black -q"
+MYPY="mypy --no-error-summary"
+RUFF="ruff check -q"
 
-# Run typos-cli if it's installed
-if command -v typos &> /dev/null; then
-    typos $TARGET
+# pylint is very slow, and is largely superseded by ruff
+# which is about 100 times faster.
+# Optionally comment this out to speed things up.
+PYLINT="pylint -E"
+
+TYPOS="typos"
+
+if [[ !"$TYPOS" || !`command -v typos` ]]
+then
+  TYPOS=
 fi
+
+TARGET="${1:-src}"
+
+Reset='\033[0m'
+UCyan='\033[4;36m'
+
+for cmd in "$BLACK" "$RUFF" "$MYPY" "$PYLINT" "$TYPOS"; do
+  if [ "$cmd" ]
+  then
+    printf "${UCyan}${cmd%% *}${Reset}\n"
+    $cmd $TARGET
+  fi
+done
+
