@@ -14,8 +14,8 @@ from . import gcode
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    import inkext
     from inkext import inksvg
+    from inkext.svg import TElement
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +51,8 @@ class SVGPreviewPlotter(gcode.PreviewPlotter):
     show_toolmarks: bool = False
     show_tm_outline: bool = False
     incr_layer_suffix: bool = True
+    flip_y_axis: bool = True
+
     # Experimental subpath options.
     # These aren't usually exposed publicly...
     x_subpath_render: bool = False
@@ -58,15 +60,17 @@ class SVGPreviewPlotter(gcode.PreviewPlotter):
     x_subpath_offset: int = 0
     x_subpath_smoothness: float = 0.5
     x_subpath_maxdist: float = 0.005
-    x_subpath_layer: inkext.TElement | None = None
+    x_subpath_layer: TElement | None = None
 
     # Create layers that will contain the G code preview
-    path_layer: inkext.TElement | None = None
-    tool_layer: inkext.TElement | None = None
-    outline_layer: inkext.TElement | None = None
+    path_layer: TElement | None = None
+    tool_layer: TElement | None = None
+    outline_layer: TElement | None = None
 
     # Non-offset tangent lines - used to make offset lines
     toolmarks: list[geom2d.Line]
+    # Toolpath segments associated with toolmarks
+    toolmark_segments: list[geom2d.Line | geom2d.Arc]
 
     # Current XYZA location
     _current_xy = geom2d.P(0.0, 0.0)
@@ -85,6 +89,7 @@ class SVGPreviewPlotter(gcode.PreviewPlotter):
         'feedline': (
             'fill:none;stroke:$feedline_stroke;'
             'stroke-width:$feedline_stroke_width'
+            ';stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4'
             ';stroke-opacity:1.0;marker-end:url(#PreviewLineEnd0)'
         ),
         'feedarc': (
@@ -134,16 +139,16 @@ class SVGPreviewPlotter(gcode.PreviewPlotter):
     }
     _style_scale_defaults: ClassVar[dict] = {
         'small': {
-            'feedline_stroke_width': '3px',
+            'feedline_stroke_width': '1.5px',
             'moveline_stroke_width': '1px',
             'toolmark_stroke_width': '1px',
             'tooloffset_stroke_width': '1px',
-            'end_marker_scale': '0.38',
+            'end_marker_scale': '0.3',
         },
         'medium': {
-            'feedline_stroke_width': '5px',
-            'moveline_stroke_width': '3px',
-            'toolmark_stroke_width': '3px',
+            'feedline_stroke_width': '3px',
+            'moveline_stroke_width': '2px',
+            'toolmark_stroke_width': '2px',
             'tooloffset_stroke_width': '1pt',
             'end_marker_scale': '0.38',
         },
@@ -186,6 +191,7 @@ class SVGPreviewPlotter(gcode.PreviewPlotter):
         style_scale: str = 'small',
         show_toolmarks: bool = False,
         show_tm_outline: bool = False,
+        flip_y_axis: bool = True,
     ) -> None:
         """Constructor.
 
@@ -201,6 +207,7 @@ class SVGPreviewPlotter(gcode.PreviewPlotter):
                 Can be 'small', 'medium', or 'large'. Default is 'medium'.
             show_toolmarks: Show a preview of the tangent tool if True.
             show_tm_outline: Show outline of tool mark path.
+            flip_y_axis: Flip Y axis so that toolpath origin is at lower left.
         """
         self.svg = svg_context
         # Tangential tool offset.
@@ -222,6 +229,7 @@ class SVGPreviewPlotter(gcode.PreviewPlotter):
         nonzero_toolwidth = not geom2d.is_zero(self.tool_width)
         self.show_toolmarks = nonzero_toolwidth and show_toolmarks
         self.show_tm_outline = nonzero_toolwidth and show_tm_outline
+        self.flip_y_axis = flip_y_axis
 
         # Initialize CSS styles used for rendering
         style_scale_values = self._style_scale_defaults[style_scale]
@@ -236,18 +244,20 @@ class SVGPreviewPlotter(gcode.PreviewPlotter):
             self.outline_layer = self.svg.create_layer(
                 OUTLINE_LAYER_NAME,
                 incr_suffix=self.incr_layer_suffix,
-                flipy=True,
+                flipy=self.flip_y_axis,
             )
-        self.path_layer = self.svg.create_layer(
-            PATH_LAYER_NAME, incr_suffix=self.incr_layer_suffix, flipy=True
-        )
-        svg_context.set_default_parent(self.path_layer)
         if self.show_toolmarks:
             self.tool_layer = self.svg.create_layer(
                 TOOL_LAYER_NAME,
                 incr_suffix=self.incr_layer_suffix,
-                flipy=True,
+                flipy=self.flip_y_axis,
             )
+        self.path_layer = self.svg.create_layer(
+            PATH_LAYER_NAME,
+            incr_suffix=self.incr_layer_suffix,
+            flipy=self.flip_y_axis,
+        )
+        svg_context.set_default_parent(self.path_layer)
 
         # Create Inkscape line end marker glyphs
         for marker in self._line_end_markers:
@@ -261,6 +271,7 @@ class SVGPreviewPlotter(gcode.PreviewPlotter):
             )
         # Non-offset tangent lines - used to make offset lines
         self.toolmarks = []
+        self.toolmark_segments = []
 
     def plot_move(self, endp: gcode.TCoord) -> None:
         """Plot G00 - rapid move from current position to :endp:(x,y,z,a)."""
@@ -302,8 +313,7 @@ class SVGPreviewPlotter(gcode.PreviewPlotter):
 
         # Draw the tool path
         sweep_flag = 0 if clockwise else 1
-        #         style = self._styles['feedarc' + str(sweep_flag)]
-        style = self._styles['feedarc']
+        style = self._styles['feedline']
         self.svg.create_circular_arc(
             self._current_xy, endp, radius, sweep_flag, style
         )
@@ -315,6 +325,7 @@ class SVGPreviewPlotter(gcode.PreviewPlotter):
         #        logger.debug('tool down')
         #        geom2d.debug.draw_point(self._current_xy, color='#00ff00')
         self.toolmarks = []
+        self.toolmark_segments = []
 
     def plot_tool_up(self) -> None:
         """Plot the end of a tool path."""
@@ -384,6 +395,7 @@ class SVGPreviewPlotter(gcode.PreviewPlotter):
             )
         # Save toolmarks for toolpath outline and sub-path creation
         self.toolmarks.append(toolmark_line)
+        self.toolmark_segments.append(segment)
 
     def _draw_toolmark_outline(self) -> None:
         """Draw an approximation of the tangent toolpath outline."""
@@ -401,8 +413,6 @@ class SVGPreviewPlotter(gcode.PreviewPlotter):
                     geom2d.debug.draw_point(p, color='#ff0000')
                 prev_toolmark = toolmark
 
-        # TODO: add non-g1 hints at natural outline cusps
-        # to avoid over-smoothing
         p1s, p2s = zip(*self.toolmarks)
         points_1 = list(p1s)
         points_2 = list(p2s)
@@ -412,6 +422,8 @@ class SVGPreviewPlotter(gcode.PreviewPlotter):
         if not side_1 or not side_2:
             return
 
+        # TODO: add non-g1 hints at natural outline cusps
+        # to avoid over-smoothing
         # Smooth out the tool outlines
         # side_1 = geom2d.bezier.smooth_path(side_1)
         # side_2 = geom2d.bezier.smooth_path(side_2)
@@ -433,7 +445,7 @@ class SVGPreviewPlotter(gcode.PreviewPlotter):
             self.x_subpath_layer = self.svg.create_layer(
                 self.x_subpath_layer_name,
                 incr_suffix=self.incr_layer_suffix,
-                flipy=True,
+                flipy=self.flip_y_axis,
             )
         offset = self.x_subpath_offset
         # All toolmark lines are the same length, so use the first one
@@ -466,6 +478,7 @@ def _make_outline_path(points: Sequence[geom2d.TPoint]) -> list[geom2d.Line]:
     prev_pt = points[0]
     for next_pt in points[1:]:
         if next_pt != prev_pt:
+            # TODO: use toolmark_segments to determine line/arc
             # Simplify the outline by skipping inline nodes.
             if path and path[-1].which_side(next_pt, inline=True) == 0:
                 prev_line = path.pop()
