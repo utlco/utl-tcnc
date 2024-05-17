@@ -1,0 +1,260 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no, user-scalable=no" />
+    <meta name="description" content="Inkscape INX dialog elements" />
+    <meta name="author" content="UTLCO" />
+    
+    <title>Inkscape INX</title>
+    
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans|Roboto:100,300,400,500|Roboto+Mono:100,300,400,500" rel="stylesheet" />
+
+    <style>
+      body {
+        margin: 1rem;
+      }
+      h4 {
+        font-size: 1rem;
+      }
+      ul {
+        list-style-type: none;
+      }
+      li {
+        margin-top: .5em;
+      }
+      ul li.attr div {
+        padding-left: 1em;
+      }
+      code.elem {
+        font-size: 1rem;
+      }
+      code.attr {
+      }
+      code.attr-value {
+        color: #a060a0;
+      }
+      code.example {
+        color: #606060;
+      }
+    </style>
+
+  </head>
+
+  <body>
+    <h1>Inkscape Extension Notes</h1>
+    <p>
+    Existing documentation for creating Inkscape extensions is minimal and most of it is out of date.
+    <p>
+    <a href="https://inkscape.org/develop/extensions/">Official Inkscape Extension Documentation</a>
+    <h3>Inkscape extension documentation from the Inkscape <a href="https://wiki.inkscape.org/wiki/index.php?title=Inkscape">wiki</a>:</h3>
+    <ul>
+      <li><a href="https://wiki.inkscape.org/wiki/index.php?title=Script_extensions">Script extensions</a></li>
+      <li><a href="https://wiki.inkscape.org/wiki/index.php?title=INX_extension_descriptor_format">INX extension descriptor format</a></li>
+      <li><a href="https://wiki.inkscape.org/wiki/index.php?title=INX_Parameters">INX Parameters</a></li>
+      <li><a href="https://wiki.inkscape.org/wiki/index.php?title=Extension_Interpreters">Extension Interpreters</a></li>
+      <li><a href="https://wiki.inkscape.org/wiki/index.php?title=Extension_repository">Extension repository</a></li>
+      <li><a href="https://wiki.inkscape.org/wiki/index.php?title=Updating_your_Extension_for_1.0">Updating your Extension for 1.0</a></li>
+      <li><a href="https://wiki.inkscape.org/wiki/index.php/Release_notes/1.0#Extensions">Inkscape 1.0 release notes re extensions</a></li>
+      <li><a href="https://inkscape.gitlab.io/extensions/documentation/inkex.html">inkex package (gitlab)</a></li>
+      <li><a href="https://gitlab.com/inkscape/inkscape/tree/master/src/extension/prefdialog">Pref dialog source code (gitlab)</a></li>
+      <li><a href="https://gitlab.com/inkscape/extensions">Extension repository (gitlab)</a></li>
+      <li><a href=""></a></li>
+      <li><a href=""></a></li>
+    </ul>
+    
+    <h2>Inkscape 1.0 INX Dialog Elements</h2>
+    <ul>
+      <li class="tag"><code class="elem">&lt;param&gt;</code>
+        <div>A dialog UI widget.</div>
+        
+        <ul class="attr-list">
+          <li><h4>Attributes:</h4></li>
+          <li class="attr"><code class="attr">name</code>
+            <div>Name of command line option (argparse argument) corresponding to this widget,
+            or the name of a <code class="elem">&lt;param type="notebook"&gt;</code> or a <code class="elem">&lt;page&gt;</code> tab.
+            This attribute is required.</div>
+          </li>
+          <li class="attr"><code class="attr">gui-text</code>
+            <div>Widget label text.</div>
+          </li>
+          <li class="attr"><code class="attr">gui-description</code>
+            <div>Tooltip text.</div>
+          </li>
+          <li class="attr"><code class="attr">type</code>
+            <div>The widget type:</div>
+            <ul class="attr-values">
+              <li class="attr-value"><code class="attr-value">"notebook"</code>
+                <div>Child <code class="elem">&lt;page&gt;</code> elements will be rendered as tabbed containers.</div>
+              </li>
+              <li class="attr-value"><code class="attr-value">"bool"</code> or <code class="attr-value">"boolean"</code>
+                <div>Rendered as a checkbox. This can have a value of "true" or "false"</div>
+              </li>
+              <li class="attr-value"><code class="attr-value">"int"</code>
+                <div>Numeric input field for an integer value.
+                Constrained by <code class="attr">min</code> and <code class="attr">max</code> attributes.
+                </div>
+              </li>
+              <li class="attr-value"><code class="attr-value">"float"</code>
+                <div>Numeric input field for a floating point value.
+                Constrained by <code class="attr">min</code>, <code class="attr">max</code>, and <code class="attr">precision</code>
+                attributes.
+                </div>
+              </li>
+              <li class="attr-value"><code class="attr-value">"string"</code>
+                <div>Text input field. Can be multi-line using <code class="example">appearance="multiline"</code>.</div>
+              </li>
+              <li class="attr-value"><code class="attr-value">"path"</code>
+                <div>Input field for a filename or path.
+                The behavior is determined by the <code class="attr">mode</code>
+                and <code class="attr">filetype</code> attributes.
+                </div>
+              </li>
+              <li class="attr-value"><code class="attr-value">"optiongroup"</code>
+                <div>A multiple choice widget rendered as a dropdown combo box
+                (<code class="example">appearance="combo"</code>),
+                or a set of radio buttons
+                (<code class="example">appearance="radio"</code>).
+                Child <code class="elem">&lt;option&gt;</code> elements define the choices.
+                </div>
+                <div>Example:</div>
+    <pre><code class="example">
+    &lt;param type="optiongroup" name="mychoice" appearance="combo" gui-text="Some choices:"&gt;
+        &lt;option value="1"&gt;One&lt;/option&gt;
+        &lt;option value="2"&gt;Two&lt;/option&gt;
+        &lt;option value="3"&gt;Three&lt;/option&gt;
+    &lt;/param&gt;
+    </code></pre>
+              </li>
+              <li class="attr-value"><code class="attr-value">"color"</code>
+                <div>A color selector widget.</div>
+              </li>
+              <li class="attr-value"><code class="attr-value">"max-length"</code>
+                <div>Max number of character in a text input field.
+                This appears to have no effect the size of the rendered input field,
+                but it does limit the number of characters that can be typed.
+                </div>
+              </li>
+              <li class="attr-value"><code class="attr-value">"description" - deprecated</code>
+                <div>Use <code class="elem">&lt;label&gt;</code></div>
+              </li>
+              <li class="attr-value"><code class="attr-value">"enum" - deprecated</code>
+                <div>Use <code class="example">type="optiongroup"</code> with <code class="example">appearance="combo"</code></div>
+              </li>
+              <li class="attr-value"><code>""</code>
+                <div>Description</div>
+              </li>
+            </ul>
+          </li>
+          <li class="attr"><code class="attr">min</code>
+            <div></div>
+          </li>
+          <li class="attr"><code class="attr">max</code>
+            <div></div>
+          </li>
+          <li class="attr"><code class="attr">precision</code>
+            <div></div>
+          </li>
+          <li class="attr"><code class="attr">max-length</code>
+            <div></div>
+          </li>
+          <li class="attr"><code class="attr">appearance</code>
+            <div></div>
+          </li>
+          <li class="attr"><code class="attr">value</code>
+            <div>The value of an <code class="elem">&lt;option&gt;</code> element.</div>
+          </li>
+          <li class="attr"><code class="attr">mode</code>
+            <div>This determines how a <code class="example">&lt;param type="path"&gt;</code>
+            is interpreted.</div>
+            <ul class="attr-values">
+              <li><h4>Allowed values:</h4></li>
+              <li class="attr-value"><code class="attr-value">"file"</code>
+                <div></div>
+              </li>
+              <li class="attr-value"><code class="attr-value">"files"</code>
+                <div></div>
+              </li>
+              <li class="attr-value"><code class="attr-value">"folder"</code>
+                <div></div>
+              </li>
+              <li class="attr-value"><code class="attr-value">"file_new"</code>
+                <div></div>
+              </li>
+              <li class="attr-value"><code class="attr-value">"folder_new"</code>
+                <div></div>
+              </li>
+            </ul>
+          </li>
+          <li class="attr"><code class="attr">filetypes</code>
+            <div>Used with <code class="example">&lt;param type="path"&gt;</code>
+            <p>
+            A comma delimited list of file extensions.</div>
+          </li>
+        </ul>
+      </li>
+      <li class="tag"><code class="elem">&lt;page&gt;</code>
+        <div>Tab container. Normally a child of <code class="elem">&lt;param type="notebook"&gt;</code>
+          <ul>
+            <li><h4>Attributes:</h4></li>
+            <li class="attr"><code class="attr">name</code>
+              <div>Required</div>
+            </li>
+            <li class="attr"><code class="attr">gui-text</code>
+              <div>Tab label text</div>
+            </li>
+          </ul>
+        </div>
+      </li>
+      <li class="tag"><code class="elem">&lt;label&gt;</code>
+        <div>
+          Arbitrary text.
+          <p>
+          Optional attributes are <code class="example">size="header|url"</code> and <code class="example">xml:space="preserve"</code>
+          <p>
+          Allowed child nodes are: &lt;br/&gt; and &lt;separator/&gt;*.
+        </div>
+      </li>
+      <li class="tag"><code class="elem">&lt;spacer&gt;</code>
+        <div>
+          Insert some whitespace. Default is vertical but is horizontal when used in <code class="elem">&lt;hbox&gt;</code>.
+          <p>
+          Optional <code class="attr">size="&lt;int&gt;|expand"</code> attribute, which if numeric
+          is padding in pixels. If the value is <code class="attr-value">"expand"</code> then the space expands to the edge
+          of the dialog minus the size of the next element (pushes elements to the left or bottom).
+          Default size seems to be about 1 rem or 20 pixels or so.
+          <p>
+        </div>
+      </li>
+      <li class="tag"><code class="elem">&lt;separator&gt;</code>
+        <div>Insert a horizontal separator line spanning the width of the dialog.</div>
+      </li>
+      <li class="tag"><code class="elem">&lt;hbox&gt;</code>
+        <div>GTK Box layout with horizontal orientation.
+          <p>
+          See: <a href="https://developer.gnome.org/gtk3/stable/GtkBox.html">GtkBox</a>
+        </div>
+      </li>
+      <li class="tag"><code class="elem">&lt;vbox&gt;</code>
+        <div>GTK Box layout with vertical orientation.
+          <p>
+          See: <a href="https://developer.gnome.org/gtk3/stable/GtkBox.html">GtkBox</a>
+        </div>
+      </li>
+      <li class="tag"><code class="elem">&lt;image&gt;</code>
+        <div>
+        Insert an image.
+        <p>
+        The image path must be in the text node.
+        <p>
+        Allowed attributes are <code class="attr">width</code> and <code class="attr">height</code>.
+        Must include both of these attributes or none, in which case the original image
+        size is used.
+        </div>
+      </li>
+      
+    </ul>
+  </body>
+
+</html>
