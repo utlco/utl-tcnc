@@ -21,9 +21,8 @@ jobs:
     - uses: ammaraskar/sphinx-action@master
       with:
         docs-folder: "docs/"
-    - uses: actions/upload-artifact@v1
+    - uses: actions/upload-pages-artifact@v3
       with:
-        name: DocumentationHTML
         path: docs/build/html/
 
   deploy:
