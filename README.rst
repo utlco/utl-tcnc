@@ -1,15 +1,16 @@
 
-.. image:: https://readthedocs.org/projects/utlco_tcnc/badge/?version=latest
-   :target: http://utlco_tcnc.readthedocs.io/en/latest/?badge=latest
-   :alt: Documentation Status
-
 ====
 TCNC
 ====
 
-* Documentation: https://tcnc.readthedocs.io (possibly out of date)
-* GitHub: https://github.com/utlco/utlco-tcnc
+* Documentation: https://tcnc.readthedocs.io (out of date)
+* GitHub: https://github.com/utlco/utl-tcnc
 * Free software: LGPL v3 license
+
+**Note:** This is a re-write/re-factor of the original `tcnc` package which
+hasn't been maintained for several years. It has been updated to
+use Python 3.9+ and is fully typed. Some bugs have been fixed and
+some new bugs have surely been introduced.
 
 Tcnc is an Inkscape (version 1.2+) extension that generates
 G-code suitable for a
@@ -39,51 +40,64 @@ Machine-specific Behavior
 
 You can specify a tool width in Tcnc to compensate for tool trail.
 Tool trail is the distance between the center of rotation around the Z axis
-and the tool contact point. This is a property of flexible brushes.
-This minimizes weird looking brush strokes
+and the tool contact point, and is a trait of flexible brushes and
+drag knives.
+Tool trail compensation mitigates trailing tool travel artifacts
+(i.e. weird looking brush strokes)
 during relatively sharp changes in direction and produces a better looking
-brush path.
+and predictable tool path.
 
+.. image:: docs/_images/example1.svg
+   :width: 500
+   :alt: Example drawing
 
 Installing Tcnc
 ---------------
 
-Note:
-.....
+TCNC requires a system Python version 3.9 or greater.
 
-TCNC requires Python 3.9 or greater.
+The installer works on Linux, possibly MacOS,
+but definitely not on Windows (yet).
 
-I think Inkscape installs a version of python3 on
-Windows if there is no default installation. Inkscape
-documentation is vague on which python3 version it
-installs and basically just says python3.6+ is required,
-but that is already very old and 3.8 is getting stale,
-so if you don't have a more recent vintage
-I suggest installing a newer version.
+Currently, installing utl-tcnc requires installing utl-inkext first
+which provides an installer for Inkscape extensions.
 
-The whole python version dependency mess is
-really unfortunate and makes distributing plugins
-kind of fraught. Mais c'est la vie...
+I haven't had the time to publish to PyPI so this requires installing
+directly from the GitHub repository.
 
-1. `Download <https://github.com/utlco/tcnc/archive/master.zip>`_
-   the latest version.
 
-2. Unzip/extract the downloaded archive file (master.zip).
+Create a virtualenv and activate
+++++++++++++++++++++++++++++++++
 
-3. Copy or move the contents of the **tcnc/inkinx** folder
-   to the user Inkscape extension folder.
+.. code-block::
 
-4. Copy or move the entire **tcnc/tcnc** folder
-   to the user Inkscape extension folder.
+    python -m venv venv
+    . venv/bin/activate
 
-5. Restart Inkscape.
+Install utl-inkext package
+++++++++++++++++++++++++++
 
-**Location of user Inkscape extension folder:**
+.. code-block::
+
+    pip install https://github.com/utlco/utl-inkext/archive/refs/heads/main.zip
+
+This will also install a python program called **inkstall** which can be used to
+install other UTLCo Inkscape extensions (such as TCNC).
+
+Install utl-tcnc extension into Inkscape using **inkstall**.
+
+.. code-block::
+
+    inkstall https://github.com/utlco/utl-tcnc/archive/refs/heads/main.zip
+
+Then restart inkscape and the extension should show up under the menu Extensions->UTLCo->Tcnc...
+
+
+Usual location of user Inkscape extensions:
 
 * MacOS, Linux:
 
-    `~/.config/inkscape/extensions`, where *~* is your home
-    directory (i.e. /home/myname).
+    `~/.config/inkscape/extensions`
 
 * Windows:
 
@@ -91,16 +105,29 @@ kind of fraught. Mais c'est la vie...
 
     This may or may not be correct. I don't know since I no longer use Windows...
 
+
 Notes
 -----
 
-These extensions do not depend at all on the extension libraries supplied
-with Inkscape. In fact, you can run these extensions as standalone
-command line tools without having to install Inkscape at all.
+This extension does not depend at all on the extension libraries supplied
+with Inkscape. In fact, you can run this extension as a standalone
+command line tool without having to install Inkscape at all. It will
+work on most SVG files.
+
+If you only want to run utl-tcnc as a command line tool then just install the
+**utl-tcnc** package::
+
+    pip install https://github.com/utlco/utl-tcnc/archive/refs/heads/main.zip
+
+To run::
+
+    tcnc --help
+
 
 Etc...
 ------
+
 Tcnc is an ongoing project that is mainly designed for my own use
-and some of the features may seem weirdly specific. Some of the code is in
-a high state of flux due to rapid cycle experimentation.
+and some of the features may seem weirdly specific or not relevant
+to most people's needs.
 
