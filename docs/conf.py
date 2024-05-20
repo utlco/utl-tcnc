@@ -16,7 +16,7 @@ import sys, os
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath('../tcnc'))
+sys.path.insert(0, os.path.abspath('../src'))
 
 # -- General configuration -----------------------------------------------------
 
@@ -25,8 +25,13 @@ sys.path.insert(0, os.path.abspath('../tcnc'))
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.mathjax', 'sphinx.ext.viewcode',
-              'sphinx.ext.autosummary', 'sphinx.ext.napoleon']
+extensions = [
+    'sphinx.ext.napoleon',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.mathjax',
+    'sphinx.ext.viewcode',
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -65,7 +70,7 @@ release = '0.2.3 beta'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = []
+exclude_patterns = ['build']
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None
@@ -91,13 +96,16 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#html_theme = 'sphinx_rtd_theme'
-html_theme = 'sphinx13'
-html_theme_path = ['_themes']
-html_css_files = [
-    # 'basic.css',  # included through inheritance from the basic theme
-    'sphinx13.css',
-]
+#html_theme = 'sphinx13'
+#html_theme_path = ['_themes']
+#html_css_files = [
+#    # 'basic.css',  # included through inheritance from the basic theme
+#    'sphinx13.css',
+#]
+html_theme = 'utl_sphinx_theme'
+html_theme_options = {
+    'title': 'TCNC',
+}
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
