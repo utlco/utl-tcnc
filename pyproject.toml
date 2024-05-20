@@ -17,7 +17,7 @@ dependencies = ["utl-inkext", "utl-geom2d"]
 
 [project.optional-dependencies]
 test = ["pytest"]
-dev = ["pytest", "black", "ruff", "pylint", "mypy"]
+dev = ["pytest", "black", "ruff", "pylint", "mypy", "sphinx"]
 
 [project.urls]
 repository = "https://github.com/utlco/utl-tcnc"
