@@ -13,15 +13,26 @@ license = {text = "GNU Lesser GPL 3"}
 classifiers = [
     "Programming Language :: Python :: 3",
 ]
-dependencies = ["utl-inkext", "utl-geom2d"]
+dependencies = [
+    "utl-inkext@https://github.com/utlco/utl-inkext/archive/refs/heads/main.zip",
+    "utl-geom2d@https://github.com/utlco/utl-geom2d/archive/refs/heads/main.zip",
+]
 
 [project.optional-dependencies]
 test = ["pytest"]
-dev = ["pytest", "black", "ruff", "pylint", "mypy", "sphinx"]
+dev = [
+    "pytest",
+    "black",
+    "ruff",
+    "pylint",
+    "mypy",
+    "sphinx",
+    "utl-sphinx-theme@https://github.com/utlco/utl-sphinx-theme/archive/refs/heads/main.zip",
+]
 
 [project.urls]
-repository = "https://github.com/utlco/utl-tcnc"
-documentation = "https://tcnc.readthedocs.io"
+Repository = "https://github.com/utlco/utl-tcnc"
+Documentation = "https://utlco.github.io/utl-tcnc"
 
 [project.scripts]
 tcnc="tcnc.tcnc:main"

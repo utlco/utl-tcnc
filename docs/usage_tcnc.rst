@@ -67,7 +67,7 @@ Tool Path Options
 .................
 
 .. figure:: _images/tcnc_dlg_path_options.png
-   :width: 5in
+   :width: 6in
 
 Enable tangent rotation
 '''''''''''''''''''''''
@@ -144,11 +144,11 @@ at the top left corner of the document. This makes it awkward to
 visualize the tool travel since most CNC machines set the origin
 at the lower left of the XY plane.
 
-Tool
-....
+Tool Options
+............
 
 .. figure:: _images/tcnc_dlg_tool.png
-   :width: 4in
+   :width: 6in
 
 Final depth
 '''''''''''
@@ -232,10 +232,11 @@ Clockwise spindle rotation
 
 Direction of spindle rotation. Default is clockwise.
 
-Machine
-.......
+Machine Options
+...............
+
 .. figure:: _images/tcnc_dlg_machine.png
-   :width: 4in
+   :width: 6in
 
 Machine target
 ''''''''''''''
@@ -295,10 +296,11 @@ Blend tolerance
 The blend tolerance (P) value when using the G64 P`t` blend mode.
 
 
-Brush
-.....
+Brush Options
+.............
+
 .. figure:: _images/tcnc_dlg_brush.png
-   :width: 4in
+   :width: 6in
 
 Enable brush reload
 '''''''''''''''''''
@@ -368,11 +370,11 @@ Create a ramp trajectory along the takeoff segment, rising along the
 Z axis to the Z safe height.
 
 
-Tolerances
-..........
+Tolerance Options
+.................
 
 .. figure:: _images/tcnc_dlg_tolerances.png
-   :width: 4in
+   :width: 6in
 
 
 Numeric tolerance
@@ -418,10 +420,11 @@ In document units. This can avoid unexpected rotations of the tangential
 tool when encountering tiny spurious curves that might be in the input path.
 
 
-Output
-......
+Output Options
+..............
+
 .. figure:: _images/tcnc_dlg_output.png
-   :width: 4in
+   :width: 6in
 
 Full path of G code output file
 '''''''''''''''''''''''''''''''
