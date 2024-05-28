@@ -3,7 +3,7 @@ TCNC
 ====
 
 * Documentation: https://utlco.github.io/utl-tcnc/
-* GitHub: https://github.com/utlco/utl-tcnc
+* Repository: https://github.com/utlco/utl-tcnc
 * Free software: LGPL v3 license
 
 **Note:** This is a re-write/re-factor of the original `tcnc` package which
@@ -32,7 +32,7 @@ This produces smaller G code files and is very accurate.
 Install
 -------
 
-See: https://utlco.github.io/utl-tcnc/installation.html
+See: https://utlco.github.io/utl-tcnc/index.html#installing-tcnc
 
 
 Notes

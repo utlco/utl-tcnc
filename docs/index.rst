@@ -15,7 +15,6 @@ TCNC
 * Free software: LGPL v3 license
 
 
-
 Introduction
 ------------
 TCNC is an Inkscape extension that generates G-code targeted for a four (or 3.5)
@@ -93,8 +92,6 @@ to install other UTLCo extensions.
 
 Related Source Code
 ...................
-
-https://github.com/utlco/utl-tcnc
 
 https://github.com/utlco/utl-inkext
 
