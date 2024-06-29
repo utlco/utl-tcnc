@@ -189,7 +189,7 @@ def _subdivide_arc(arc: geom2d.Arc) -> list[geom2d.Arc]:
     smaller_arcs: list[geom2d.Arc] = []
     arc2: geom2d.Arc | None = arc
     while arc2 and abs(arc2.angle) > (math.pi / 2):
-        arcs = arc2.subdivide_at(mu)
+        arcs = arc2.subdivide(mu)
         smaller_arcs.append(arcs[0])
         arc2 = arcs[1] if len(arcs) > 1 else None
     if arc2:
