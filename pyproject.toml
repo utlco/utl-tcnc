@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "utl-tcnc"
-version = "0.2.0"
+version = "0.2.1"
 authors = [{name = "Claude Zervas", email = "claude@utlco.com"}]
 description = "Simple 3.5 axis gcode generator (CAM)"
 readme = "README.rst"
@@ -14,8 +14,10 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 dependencies = [
-    "utl-inkext@https://github.com/utlco/utl-inkext/archive/refs/heads/main.zip",
-    "utl-geom2d@https://github.com/utlco/utl-geom2d/archive/refs/heads/main.zip",
+    #"utl-inkext@https://github.com/utlco/utl-inkext/archive/refs/heads/main.zip",
+    #"utl-geom2d@https://github.com/utlco/utl-geom2d/archive/refs/heads/main.zip",
+    "utl-inkext",
+    "utl-geom2d",
 ]
 
 [project.optional-dependencies]
@@ -27,7 +29,8 @@ dev = [
     "pylint",
     "mypy",
     "sphinx",
-    "utl-sphinx-theme@https://github.com/utlco/utl-sphinx-theme/archive/refs/heads/main.zip",
+    #"utl-sphinx-theme@https://github.com/utlco/utl-sphinx-theme/archive/refs/heads/main.zip",
+    "utl-sphinx-theme",
 ]
 
 [project.urls]

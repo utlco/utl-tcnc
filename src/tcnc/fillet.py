@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import geom2d
 import geom2d.fillet
+import geom2d.plotpath
 
 from . import toolpath
 from .toolpath import ToolpathArc, ToolpathSegment
@@ -113,7 +114,6 @@ def _create_adjusted_fillet(
         continuous, or are somehow degenerate.)
     """
     if geom2d.segments_are_g1(seg1, seg2):
-        # geom2d.debug.draw_point(seg2.p1, color='#0000ff')
         # Segments are already tangentially connected (G1)
         return ()
 

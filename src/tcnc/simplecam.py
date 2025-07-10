@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
 if _DEBUG or TYPE_CHECKING:
+    import geom2d.debug
     import geom2d.plotpath  # pylint: disable=ungrouped-imports
 
 
@@ -170,9 +171,9 @@ class SimpleCAM:
         #    self.options.z_step = abs(self.options.z_depth)
 
         toolpaths = self.generate_toolpaths(path_list)
-        if _DEBUG:
-            for t in toolpaths:
-                geom2d.plotpath.draw_path(t, width='.5px')
+        # if _DEBUG:
+        #    for t in toolpaths:
+        #        geom2d.plotpath.draw_path(t, width='.5px')
 
         toolpaths = self.postprocess_toolpaths(toolpaths)
 

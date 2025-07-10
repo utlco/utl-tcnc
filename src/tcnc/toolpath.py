@@ -121,7 +121,7 @@ class Toolpath(list[ToolpathSegment]):
         )
 
     @staticmethod
-    def toolpath_iter(
+    def toolpath_iter(  # noqa: PLR0912
         path: Iterable[geom2d.Line | geom2d.Arc | geom2d.CubicBezier],
         biarc_tolerance: float = 0.001,
         biarc_max_depth: float = 4,

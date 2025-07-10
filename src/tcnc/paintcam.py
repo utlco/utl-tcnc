@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import dataclasses
 import math
 
@@ -120,6 +121,22 @@ class PaintCAM(simplecam.SimpleCAM):
 
     def _append_takeoff(self, path: toolpath.Toolpath) -> None:
         """Append an overshoot line segment."""
+        # If the path is closed (ie polygon) then use the first segment(s)
+        # as the takeoff strip.
+        if path[-1].p2 == path[0].p1:
+            takeoff_segments = []
+            seglen = 0
+            for seg in path:
+                takeoff_seg = copy.deepcopy(path[0])
+                seglen += takeoff_seg.length()
+                if seglen > self.options.takeoff:
+                    # Trim last takeoff segment to fit
+                    trim_val = seglen - self.options.takeoff
+                    seglen -= trim_val
+                takeoff_segments.append(takeoff_seg)
+                if seglen >= self.options.takeoff:
+                    break
+
         last_segment = path[-1]
         brush_direction = toolpath.seg_end_angle(last_segment)
         delta = geom2d.P.from_polar(self.options.brush_takeoff, brush_direction)

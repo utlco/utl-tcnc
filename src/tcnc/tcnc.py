@@ -9,6 +9,7 @@ from __future__ import annotations
 import gettext
 import logging
 import math
+import pathlib
 
 # For performance measuring and debugging
 import timeit
@@ -388,6 +389,12 @@ class Tcnc(inkext.InkscapeExtension):
         )
 
         parser.add_argument(
+            '--file-layer',
+            type=inkext.inkbool,
+            default=False,
+            help=_('Use <file>-<layer>.ngc as filename'),
+        )
+        parser.add_argument(
             '--output-path', default='~/output.ngc', help=_('Output path name')
         )
         parser.add_argument(
@@ -456,7 +463,6 @@ class Tcnc(inkext.InkscapeExtension):
         if not self.options.path_close_polygons:
             self.options.path_close_overlap = 0
 
-
     # pylint: enable=too-many-statements
 
     def effect(self) -> None:
@@ -490,11 +496,17 @@ class Tcnc(inkext.InkscapeExtension):
         )
 
         # Create the output file path name
+        default_stem = pathlib.Path(self.svg.doc_name).stem
+        if self.svg.selected_layer_name:
+            stem_suffix = self.svg.selected_layer_name.replace(' ', '_')
+            default_stem = f'{default_stem}-{stem_suffix}'
         filepath = inkext.output_path(
             self.options.output_path,
             auto_incr=self.options.append_suffix,
+            default_stem=default_stem,
             default_suffix='.ngc',
         )
+        #inkext.errormsg(filepath)
         # logger.debug('gcode output: %s', filepath)
         try:
             with filepath.open('w', encoding='utf-8') as output:

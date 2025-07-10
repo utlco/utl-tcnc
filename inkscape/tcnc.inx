@@ -219,7 +219,10 @@
       <param indent="4" name="write-settings" type="boolean" gui-text="Write settings in header comments">true</param>
 
       <spacer/>
-      <param name="output-path" type="string" gui-text="Full path of G code output file">~/output.ngc</param>
+      <!--
+      <param name="file-layer" type="boolean" gui-text="Use <file>-<layer name>.ngc as output file name.">false</param>
+      -->
+      <param name="output-path" type="string" gui-text="Full path of G code output file or directory.">~/output.ngc</param>
       <param name="append-suffix" type="boolean" gui-text="Auto-increment filename suffix">false</param>
       <!--
       <param name="separate-layers" type="boolean" gui-text="Create separate gcode file per Inkscape layer">false</param>
